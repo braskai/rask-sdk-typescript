@@ -1,0 +1,68 @@
+{
+  "name": "@braskai/rask-sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript SDK for the Rask AI API (video and audio localization)",
+  "license": "UNLICENSED",
+  "author": "Brask AI",
+  "homepage": "https://github.com/braskai/rask-sdk-typescript#readme",
+  "bugs": {
+    "url": "https://github.com/braskai/rask-sdk-typescript/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/braskai/rask-sdk-typescript.git"
+  },
+  "keywords": [
+    "rask",
+    "rask-ai",
+    "dubbing",
+    "localization",
+    "translation",
+    "video",
+    "sdk",
+    "openapi"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters",
+    "test": "vitest run",
+    "test:dist": "node scripts/smoke-dist.mjs && node scripts/smoke-dist.cjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "@types/node": "22.20.5",
+    "tsdown": "0.23.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}
