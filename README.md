@@ -201,6 +201,18 @@ The source of truth for the spec is the private repository [`braskai/rask-api-do
 
 Never edit `src/generated/` by hand. The generator config creates a single `RaskApi` class whose method names come from the `operationId`s, uses the bundled fetch client with `throwOnError`, and returns the response body. It also inlines `$ref` request bodies in memory so that body fields become flat method parameters. `src/client.ts` adds authentication, `RaskApiError` mapping and the 401 retry on top. CI fails when `src/generated/` is out of date with the spec.
 
+### Releasing
+
+Releases are published to npm by [`.github/workflows/release.yml`](.github/workflows/release.yml) with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC, no stored npm token, provenance once the repository is public).
+
+1. Bump `version` in `package.json` (and merge it).
+2. Create a GitHub Release with the tag `v<version>`, for example `v0.2.0`. Mark it as a pre-release to publish under the `next` dist-tag instead of `latest`.
+3. The workflow checks that the tag matches `package.json`, runs the checks and runs `npm publish`.
+
+Trusted publisher settings for `@braskai/rask-sdk` on npmjs.com: organization `braskai`, repository `rask-sdk-typescript`, workflow `release.yml`, environment `npm`.
+
+npm can only attach a trusted publisher to a package that already exists. The very first version is therefore published either manually (`npm ci && npm publish --access public` by an `@braskai` org member) or through the workflow with a temporary granular token in the `NPM_TOKEN` secret of the `npm` environment. After that, configure the trusted publisher, delete `NPM_TOKEN`, and set the package's publishing access to "Require two-factor authentication and disallow tokens".
+
 ## License
 
 UNLICENSED (proprietary) until a license is chosen.
