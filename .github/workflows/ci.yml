@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The dev toolchain (openapi-ts, tsdown, vitest) needs Node >= 22.18.
+        # The built package itself is checked on Node 18/20 in the `runtime` job.
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:dist
+      - name: Generated client matches openapi/openapi.yml
+        run: |
+          npm run generate
+          git diff --exit-code -- src/generated
+      - name: Package contents
+        run: npm pack --dry-run
+      - if: matrix.node == 22
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+  runtime:
+    name: Runtime smoke (${{ matrix.runtime }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [node-18, node-20, bun, deno]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - if: startsWith(matrix.runtime, 'node-')
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.runtime == 'node-18' && '18' || '20' }}
+      - if: startsWith(matrix.runtime, 'node-')
+        run: node scripts/smoke-dist.mjs && node scripts/smoke-dist.cjs
+      - if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+      - if: matrix.runtime == 'bun'
+        run: bun scripts/smoke-dist.mjs && bun scripts/smoke-dist.cjs
+      - if: matrix.runtime == 'deno'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - if: matrix.runtime == 'deno'
+        run: deno run --allow-read scripts/smoke-dist.mjs
