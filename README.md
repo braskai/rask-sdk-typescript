@@ -51,7 +51,10 @@ Upload a video by link, create a dubbing project, wait until it is done and read
 ```ts
 import { MediaStatus, ProjectStatus, RaskClient } from '@braskai/rask-sdk';
 
-const rask = new RaskClient({ clientId, clientSecret });
+const rask = new RaskClient({
+  clientId: process.env.RASK_CLIENT_ID!,
+  clientSecret: process.env.RASK_CLIENT_SECRET!,
+});
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 1. Upload media by link and wait until it is processed
@@ -65,9 +68,15 @@ if (media.status !== MediaStatus.READY) throw new Error('media processing failed
 // 2. Create the project (dubbing starts automatically)
 let project = await rask.createProject({ video_id: media.id, dst_lang: 'es' });
 
-// 3. Poll until the translated video is merged
+// 3. Poll until the translated video is merged; stop on any terminal failure
+const failures: (string | null | undefined)[] = [
+  ProjectStatus.FAILED,
+  ProjectStatus.NO_AUDIO,
+  ProjectStatus.NO_WORDS,
+  ProjectStatus.FORBIDDEN_LINK,
+];
 while (project.status !== ProjectStatus.MERGING_DONE) {
-  if (project.status === ProjectStatus.FAILED || project.status?.endsWith('_failed')) {
+  if (failures.includes(project.status) || project.status?.endsWith('_failed')) {
     throw new Error(`project failed: ${project.status}`);
   }
   await sleep(10_000);
@@ -206,7 +215,7 @@ Never edit `src/generated/` by hand. The generator config creates a single `Rask
 Releases are published to npm by [`.github/workflows/release.yml`](.github/workflows/release.yml) with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC, no stored npm token, provenance once the repository is public).
 
 1. Bump `version` in `package.json` (and merge it).
-2. Create a GitHub Release with the tag `v<version>`, for example `v0.2.0`. Mark it as a pre-release to publish under the `next` dist-tag instead of `latest`.
+2. Create a GitHub Release with the tag `v<version>`, for example `v0.2.0`. For a pre-release, use a pre-release version (`0.2.0-rc.1`) and mark the GitHub Release as a pre-release; it is published under the `next` dist-tag instead of `latest`. The workflow refuses mismatches, because npm never allows publishing the same version twice.
 3. The workflow checks that the tag matches `package.json`, runs the checks and runs `npm publish`.
 
 Trusted publisher settings for `@braskai/rask-sdk` on npmjs.com: organization `braskai`, repository `rask-sdk-typescript`, workflow `release.yml`, environment `npm`.

@@ -39,10 +39,18 @@ jobs:
       - name: Tag matches package.json version
         env:
           TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           version="v$(node -p 'require("./package.json").version')"
           if [ "$TAG" != "$version" ]; then
             echo "::error::Release tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+          # npm never allows re-publishing a version, so a stable version must not
+          # go out under "next" (and a pre-release version must not become "latest").
+          case "$version" in *-*) semver_pre=true ;; *) semver_pre=false ;; esac
+          if [ "$PRERELEASE" != "$semver_pre" ]; then
+            echo "::error::GitHub pre-release=$PRERELEASE but $version is $([ "$semver_pre" = true ] || echo 'not ')a pre-release version (use e.g. 0.2.0-rc.1 for pre-releases)"
             exit 1
           fi
       - run: npm ci
