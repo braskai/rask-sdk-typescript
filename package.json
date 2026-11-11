@@ -59,6 +59,9 @@
     "acceptance:node": "node test/acceptance/cli.mjs",
     "acceptance:bun": "bun test/acceptance/cli.mjs",
     "acceptance:deno": "deno run -A test/acceptance/cli.mjs",
+    "runtime:node": "node test/runtime/check.mjs",
+    "runtime:bun": "bun test/runtime/check.mjs",
+    "runtime:deno": "deno run -A test/runtime/check.mjs",
     "prepack": "npm run build",
     "test:ci": "vitest run --exclude test/acceptance.test.ts --exclude test/operations.test.ts --exclude test/examples.test.ts --exclude test/uploads.test.ts"
   },

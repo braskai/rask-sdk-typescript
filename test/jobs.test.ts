@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { JobCanceledError, JobFailedError, Rask, ValidationError, WaitTimeoutError } from '../src/index';
+import {
+  JobCanceledError,
+  JobFailedError,
+  Rask,
+  RaskConnectionError,
+  ValidationError,
+  WaitTimeoutError,
+} from '../src/index';
 import { BASE, json, problem, stubFetch, TEST_KEY } from './helpers';
 
 const job = (status: string, extra: Record<string, unknown> = {}) =>
@@ -102,6 +109,38 @@ describe('jobs.wait', () => {
       expect(calls).toBe(3);
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it('raises a certificate that fails verification at once, and not as a timeout when the wait runs out', async () => {
+    let calls = 0;
+    // The same on every poll, as the certificate is. This is what Node 24.14.1 throws for an expired one.
+    const fetch = (async () => {
+      calls += 1;
+      const cause = Object.assign(new Error('certificate has expired'), { code: 'CERT_HAS_EXPIRED' });
+      throw new TypeError('fetch failed', { cause });
+    }) as typeof globalThis.fetch;
+    const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch });
+    const error = await rask.jobs.wait('j', { timeoutSeconds: 2 }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(RaskConnectionError);
+    expect(error).toMatchObject({ cause: { cause: { code: 'CERT_HAS_EXPIRED' } } });
+    expect(calls).toBe(1);
+  });
+
+  it('takes no listener off its own deadline between polls', async () => {
+    // Bun 1.3 stops the timer of an AbortSignal.timeout() for good at that, and the wait would outlast its timeout.
+    const made = vi.spyOn(AbortSignal, 'timeout');
+    const removed = vi.spyOn(EventTarget.prototype, 'removeEventListener');
+    try {
+      const { rask, calls } = client([job('queued'), job('succeeded')]);
+      await rask.jobs.wait('j');
+      expect(calls).toHaveLength(2);
+      const timeouts = made.mock.results.map((result) => result.value);
+      expect(timeouts.length).toBeGreaterThan(0);
+      expect(removed.mock.contexts.filter((target) => timeouts.includes(target))).toEqual([]);
+    } finally {
+      made.mockRestore();
+      removed.mockRestore();
     }
   });
 

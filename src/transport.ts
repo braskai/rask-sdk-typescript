@@ -89,10 +89,56 @@ const MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const NO_BODY_STATUSES = new Set([204, 205, 304]);
 const SECRET_QUERY = /signature|credential|token|secret|sig$|key$/i;
+// What fetch was seen to throw for a certificate that fails verification. Node 24 (undici) puts an error with one of
+// these codes in `cause`, and Bun 1.3 throws one with the same code itself.
+const CERTIFICATE_CODES = new Set([
+  'DEPTH_ZERO_SELF_SIGNED_CERT',
+  'SELF_SIGNED_CERT_IN_CHAIN',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
+  'CERT_HAS_EXPIRED',
+  'CERT_NOT_YET_VALID',
+  'CERT_SIGNATURE_FAILURE',
+  'INVALID_PURPOSE',
+  'ERR_TLS_CERT_ALTNAME_INVALID',
+]);
+// Deno 2.7 (rustls) gives no code: its message says this, then what is wrong with the certificate.
+const CERTIFICATE_MESSAGE = 'invalid peer certificate';
+// A fetch of the caller's may wrap the error in its own, and a cause can lead back to itself.
+const CAUSE_DEPTH = 5;
 
 /** Exponential backoff with jitter of +/- 25%. */
 export const backoffMs = (attempt: number): number =>
   Math.min(BACKOFF_START_MS * BACKOFF_FACTOR ** attempt, BACKOFF_MAX_MS) * (0.75 + Math.random() / 2);
+
+/**
+ * True when a failed fetch was a certificate that fails verification. That is the same on every attempt, so a call or
+ * a wait that retried it would only report it later. Whatever is not recognised here may pass, and is retried.
+ */
+export const isCertificateFailure = (cause: unknown): boolean => {
+  let error = cause;
+  for (let depth = 0; depth < CAUSE_DEPTH && error !== null && typeof error === 'object'; depth += 1) {
+    const { code, message, cause: inner } = error as { code?: unknown; message?: unknown; cause?: unknown };
+    if (typeof code === 'string' && CERTIFICATE_CODES.has(code)) return true;
+    if (typeof message === 'string' && message.includes(CERTIFICATE_MESSAGE)) return true;
+    error = inner;
+  }
+  return false;
+};
+
+// The SDK listens on a signal that follows the one it was given, never on that one itself. Left there, a listener
+// would pile up per wait on a signal that outlives the call. Taken off again, it leaves an AbortSignal.timeout() with
+// no listener, and Bun 1.3 then stops its timer for good: the timeout never comes. One follower per signal, since
+// Node keeps a record on a signal of every AbortSignal.any made from it, for as long as the signal lives.
+const followers = new WeakMap<AbortSignal, AbortSignal>();
+const follow = (signal: AbortSignal): AbortSignal => {
+  let follower = followers.get(signal);
+  if (!follower) {
+    follower = AbortSignal.any([signal]);
+    followers.set(signal, follower);
+  }
+  return follower;
+};
 
 export const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
   new Promise((resolve, reject) => {
@@ -100,15 +146,16 @@ export const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
       reject(signal.reason);
       return;
     }
+    const watched = signal && follow(signal);
     const onAbort = () => {
       clearTimeout(timer);
       reject(signal?.reason);
     };
     const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
+      watched?.removeEventListener('abort', onAbort);
       resolve();
     }, ms);
-    signal?.addEventListener('abort', onAbort, { once: true });
+    watched?.addEventListener('abort', onAbort, { once: true });
   });
 
 /**
@@ -332,7 +379,7 @@ export class Transport {
         // Thrown by #dispatch: anything but a connection failure, such as the caller's abort, ends the call.
         if (!(error instanceof RaskConnectionError)) throw error;
         failure = error;
-        retry = true;
+        retry = !isCertificateFailure(error.cause);
       } else {
         this.#warn(op.id, response.headers);
         const notModified = response.status === 304 && params.ifNoneMatch !== undefined;

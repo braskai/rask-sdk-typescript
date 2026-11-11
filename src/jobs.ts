@@ -1,7 +1,7 @@
 import { JobCanceledError, JobFailedError, RaskConnectionError, RaskError, WaitTimeoutError } from './errors';
 import { JobsResource } from './generated/resources.gen';
 import type { Job } from './generated/types.gen';
-import { backoffMs, type RaskResponse, retryAfterMs, sleep } from './transport';
+import { backoffMs, isCertificateFailure, type RaskResponse, retryAfterMs, sleep } from './transport';
 
 export const DEFAULT_WAIT_TIMEOUT_SECONDS = 14_400;
 const LONG_POLL_SECONDS = 20;
@@ -17,8 +17,10 @@ export interface WaitOptions {
   signal?: AbortSignal;
 }
 
+// What the call itself does not retry is the same on the next poll. Taken for an outage, a certificate that fails
+// verification would come back when the wait ran out, as a timeout without its cause.
 const isTransient = (error: unknown): error is RaskError =>
-  error instanceof RaskConnectionError ||
+  (error instanceof RaskConnectionError && !isCertificateFailure(error.cause)) ||
   (error instanceof RaskError && error.status !== undefined && TRANSIENT_STATUSES.has(error.status));
 
 export class Jobs extends JobsResource {

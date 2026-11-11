@@ -22,7 +22,7 @@ import {
   ValidationError,
   VERSION,
 } from '../src/index';
-import { backoffMs } from '../src/transport';
+import { backoffMs, isCertificateFailure } from '../src/transport';
 import { BASE, json, problem, stubFetch, TEST_KEY } from './helpers';
 
 const client = (replies: Parameters<typeof stubFetch>[0], options = {}) => {
@@ -31,6 +31,21 @@ const client = (replies: Parameters<typeof stubFetch>[0], options = {}) => {
 };
 
 afterEach(() => vi.restoreAllMocks());
+
+// What fetch threw on each runtime, recorded against a local HTTPS server with throwaway certificates and then built
+// here by hand. test/runtime/check.mjs makes such certificates again and shows the same on the runtime itself.
+const SEEN_URL = 'https://localhost:8443/v3/folders';
+// Node 24.14.1 (undici): a TypeError that says nothing, with the reason and its code in `cause`.
+const fromNode = (code: string, message: string) =>
+  new TypeError('fetch failed', { cause: Object.assign(new Error(message), { code }) });
+// Bun 1.3.13: an Error that carries the code itself, and no cause.
+const fromBun = (code: string, message: string) =>
+  Object.assign(new Error(message), { code, path: SEEN_URL, errno: 0 });
+// Deno 2.7.12 (rustls): a TypeError with a message and nothing else.
+const fromDeno = (reason: string) =>
+  new TypeError(`error sending request for url (${SEEN_URL}): client error (Connect): ${reason}`);
+const NODE_HINT = '; if the root CA is installed locally, try running Node.js with --use-system-ca';
+const BUN_HINT = 'For more information, pass `verbose: true` in the second argument to fetch()';
 
 describe('errors', () => {
   it.each([
@@ -229,6 +244,179 @@ describe('retries', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('a certificate that fails verification', () => {
+  it.each([
+    ['Node, self-signed', fromNode('DEPTH_ZERO_SELF_SIGNED_CERT', `self-signed certificate${NODE_HINT}`)],
+    [
+      'Node, self-signed in the chain',
+      fromNode('SELF_SIGNED_CERT_IN_CHAIN', 'self-signed certificate in certificate chain'),
+    ],
+    [
+      'Node, unknown issuer',
+      fromNode('UNABLE_TO_VERIFY_LEAF_SIGNATURE', `unable to verify the first certificate${NODE_HINT}`),
+    ],
+    [
+      'Node, unknown issuer above an intermediate',
+      fromNode('UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'unable to get local issuer certificate'),
+    ],
+    ['Node, expired', fromNode('CERT_HAS_EXPIRED', 'certificate has expired')],
+    ['Node, not valid yet', fromNode('CERT_NOT_YET_VALID', 'certificate is not yet valid')],
+    ['Node, signed by another key', fromNode('CERT_SIGNATURE_FAILURE', 'certificate signature failure')],
+    ['Node, for clients only', fromNode('INVALID_PURPOSE', 'unsuitable certificate purpose')],
+    [
+      'Node, another host name',
+      fromNode(
+        'ERR_TLS_CERT_ALTNAME_INVALID',
+        "Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:elsewhere.test",
+      ),
+    ],
+    ['Bun, self-signed', fromBun('DEPTH_ZERO_SELF_SIGNED_CERT', 'self signed certificate')],
+    [
+      'Bun, self-signed in the chain',
+      fromBun('SELF_SIGNED_CERT_IN_CHAIN', 'self signed certificate in certificate chain'),
+    ],
+    ['Bun, unknown issuer', fromBun('UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'unable to verify the first certificate')],
+    [
+      'Bun, unknown issuer above an intermediate',
+      fromBun('UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'unable to get local issuer certificate'),
+    ],
+    ['Bun, expired', fromBun('CERT_HAS_EXPIRED', 'certificate has expired')],
+    ['Bun, not valid yet', fromBun('CERT_NOT_YET_VALID', 'certificate is not yet valid')],
+    ['Bun, signed by another key', fromBun('CERT_SIGNATURE_FAILURE', 'certificate signature failure')],
+    ['Bun, for clients only', fromBun('INVALID_PURPOSE', 'unsupported certificate purpose')],
+    [
+      'Bun, another host name',
+      fromBun('ERR_TLS_CERT_ALTNAME_INVALID', `ERR_TLS_CERT_ALTNAME_INVALID fetching "${SEEN_URL}". ${BUN_HINT}`),
+    ],
+    ['Deno, self-signed or of an unknown issuer', fromDeno('invalid peer certificate: UnknownIssuer')],
+    [
+      'Deno, self-signed and marked as an authority',
+      fromDeno('invalid peer certificate: Other(OtherError(CaUsedAsEndEntity))'),
+    ],
+    [
+      'Deno, expired',
+      fromDeno(
+        'invalid peer certificate: certificate expired: verification time 1794405380 (UNIX), but certificate is not valid after 1577923200 (216482180 seconds ago)',
+      ),
+    ],
+    [
+      'Deno, not valid yet',
+      fromDeno(
+        'invalid peer certificate: certificate not valid yet: verification time 1794405380 (UNIX), but certificate is not valid before 2208988800 (414583420 seconds in future)',
+      ),
+    ],
+    ['Deno, signed by another key', fromDeno('invalid peer certificate: BadSignature')],
+    [
+      'Deno, for clients only',
+      fromDeno(
+        'invalid peer certificate: certificate does not allow extended key usage for server authentication, allows client authentication',
+      ),
+    ],
+    [
+      'Deno, another host name',
+      fromDeno(
+        'invalid peer certificate: certificate not valid for name "localhost"; certificate is only valid for DnsName("elsewhere.test")',
+      ),
+    ],
+  ])('ends the call at its first attempt, with the cause and the key (%s)', async (_seen, thrown) => {
+    // The same on every attempt: a retry would only report it two minutes later.
+    const { rask, calls } = client([thrown, json({ id: 'f' }, 201)]);
+    const error = await rask.projects
+      .createFolder({ body: { name: 'x' }, idempotencyKey: 'caller-key' })
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(RaskConnectionError);
+    expect(error).not.toBeInstanceOf(RaskTimeoutError);
+    expect((error as RaskError).cause).toBe(thrown);
+    expect((error as RaskError).idempotencyKey).toBe('caller-key');
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      'Node, refused',
+      new TypeError('fetch failed', {
+        cause: Object.assign(new AggregateError([new Error('connect ECONNREFUSED 127.0.0.1:8443')], ''), {
+          code: 'ECONNREFUSED',
+        }),
+      }),
+    ],
+    [
+      'Node, reset in the handshake',
+      fromNode('ECONNRESET', 'Client network socket disconnected before secure TLS connection was established'),
+    ],
+    ['Node, closed by the other side', fromNode('UND_ERR_SOCKET', 'other side closed')],
+    [
+      'Node, no TLS on the port',
+      fromNode(
+        'ERR_SSL_PACKET_LENGTH_TOO_LONG',
+        '00534CF101000000:error:0A0000C6:SSL routines:tls_get_more_records:packet length too long:../deps/openssl/openssl/ssl/record/methods/tls_common.c:661:\n',
+      ),
+    ],
+    ['Node, no such host', fromNode('ENOTFOUND', 'getaddrinfo ENOTFOUND no-such-host.invalid')],
+    [
+      'Bun, refused, and no such host',
+      fromBun('ConnectionRefused', 'Unable to connect. Is the computer able to access the url?'),
+    ],
+    ['Bun, reset', fromBun('ECONNRESET', `The socket connection was closed unexpectedly. ${BUN_HINT}`)],
+    ['Deno, refused', fromDeno('tcp connect error: Connection refused (os error 61)')],
+    ['Deno, reset in the handshake', fromDeno('tls handshake eof')],
+    ['Deno, no TLS on the port', fromDeno('received corrupt message of type InvalidContentType')],
+    [
+      'Deno, no such host',
+      fromDeno('dns error: failed to lookup address information: nodename nor servname provided, or not known'),
+    ],
+    [
+      'Deno, the server asks the client for a certificate',
+      new TypeError(
+        'error sending request from 127.0.0.1:62701 for https://localhost:8443/ (127.0.0.1:8443): client error (SendRequest): connection error: received fatal alert: CertificateRequired',
+        { cause: new Error('received fatal alert: CertificateRequired') },
+      ),
+    ],
+    ['a fetch that says nothing', new TypeError('fetch failed')],
+    ['a timeout', new DOMException('The operation was aborted due to timeout', 'TimeoutError')],
+    ['nothing', undefined],
+  ])('is not seen in any other failure, which is retried as before (%s)', (_seen, thrown) => {
+    expect(isCertificateFailure(thrown)).toBe(false);
+  });
+
+  it('is found under the causes a fetch of your own adds, and not looked for in a circle of them', () => {
+    const wrapped = new Error('request failed', { cause: fromNode('CERT_HAS_EXPIRED', 'certificate has expired') });
+    expect(isCertificateFailure(wrapped)).toBe(true);
+    const circle = new Error('round');
+    circle.cause = circle;
+    expect(isCertificateFailure(circle)).toBe(false);
+  });
+});
+
+describe("the caller's signal", () => {
+  // Bun 1.3 stops the timer of an AbortSignal.timeout() for good once its last listener is taken off, and a listener
+  // left on would pile up on a signal that outlives the call. That the timeout still comes on each runtime is for
+  // test/runtime/check.mjs to show: this holds the rule that keeps it coming.
+  it('is waited on between attempts without a listener of its own', async () => {
+    const signal = AbortSignal.timeout(60_000);
+    const added = vi.spyOn(signal, 'addEventListener');
+    const removed = vi.spyOn(signal, 'removeEventListener');
+    const { rask, calls } = client([new Response('', { status: 503 }), json({ id: 'me' })]);
+    await rask.account.getMe({ signal });
+    expect(calls).toHaveLength(2);
+    expect(added).not.toHaveBeenCalled();
+    expect(removed).not.toHaveBeenCalled();
+  });
+
+  it('ends every wait that is on it, and a later call before it is sent', async () => {
+    const controller = new AbortController();
+    const busy = () => client([new Response('', { status: 503, headers: { 'Retry-After': '30' } })]);
+    const waiting = [busy(), busy()].map(({ rask }) =>
+      rask.account.getMe({ signal: controller.signal }).catch((caught: unknown) => caught),
+    );
+    setTimeout(() => controller.abort(new Error('stop')), 20);
+    for (const outcome of await Promise.all(waiting)) expect(outcome).toBe(controller.signal.reason);
+    const late = busy();
+    await expect(late.rask.account.getMe({ signal: controller.signal })).rejects.toThrow('stop');
+    expect(late.calls).toHaveLength(0);
   });
 });
 

@@ -112,7 +112,8 @@ const next = await page.nextPage(); // null after the last page
 
 Each call retries 429, 502, 503, 504, connection errors and timeouts, for up to 120 s in all, with backoff from 0.5 s to
 30 s and `Retry-After` honoured. A `Retry-After` past that budget ends the retries at once. 500, 409, 412 and 428 are not
-retried, except `idempotency_key_in_use`, up to 3 times.
+retried, except `idempotency_key_in_use`, up to 3 times. Neither is a certificate that fails verification: the call and
+`jobs.wait` raise it at once, as a `RaskConnectionError` with the runtime's own error in `cause`.
 
 Every call that takes an `Idempotency-Key` sends a new UUIDv4, the same across its retries. Pass `idempotencyKey` to use
 your own. The key that was sent is on the result and on the error.
@@ -172,6 +173,14 @@ it next to this checkout, or in `RASK_SDK_ACCEPTANCE_DIR`:
 npm run test:acceptance                  # on src, with Vitest
 npm run build && npm run acceptance:bun  # on dist; also acceptance:node, acceptance:deno
 RUN_SLOW=1 npm run test:acceptance       # adds the two scenarios that take minutes
+```
+
+What only a runtime can show has a check of its own, which needs no harness: that a timeout signal still ends a call and
+a wait, and that a certificate which fails verification ends them at the first attempt. It makes throwaway certificates
+with `openssl` in a temporary directory, and skips that part where there is no `openssl`:
+
+```sh
+npm run build && npm run runtime:bun     # on dist; also runtime:node, runtime:deno
 ```
 
 To try a test stand, `RASK_API_KEY=... RASK_BASE_URL=... node examples/smoke/smoke.mjs` after a build makes a few real calls.
