@@ -1,19 +1,22 @@
 # Releasing
 
-A release is a GitHub Release. Publishing one sends the package to npm from CI; nobody publishes from a laptop.
+A release is one run of the `Release` workflow. It publishes the package to npm from CI; nobody publishes from a laptop.
 
 1. In a pull request, set the new version in `package.json` and `src/version.ts` (a test keeps them equal). Merge it.
-2. Publish a GitHub Release whose tag is `v` plus that version. Without `--target`, the tag goes on the default branch:
+2. Start the workflow on the default branch, with "Run workflow" on the Actions tab or from a terminal:
 
    ```sh
-   gh release create v3.0.0-alpha.1 --generate-notes --prerelease
+   gh workflow run release.yml
    ```
 
-3. The `Release` workflow runs the CI checks on the tag and publishes `@braskai/api` to npm, with provenance.
+3. The workflow runs the CI checks, publishes `@braskai/api` to npm with provenance, then tags the commit `v` plus the
+   version and makes the GitHub Release.
 
-The workflow refuses a tag that is not the version in `package.json`, and a tag that is not on the default branch.
+The workflow refuses to run from any other branch, and refuses a version that is already tagged or already on npm.
 A pre-release version goes out as `latest` while no stable version exists, and as `next` once one does.
 A published version cannot be replaced: to fix one, release the next.
+If a run fails after npm took the version, make the release by hand:
+`gh release create v<version> --target <the commit> --generate-notes`.
 
 ## Set up once
 
@@ -27,4 +30,6 @@ npm trusts the workflow itself (trusted publishing), so this repository holds no
   npm trust github @braskai/api --repository braskai/rask-sdk-typescript --file release.yml --environment npm --allow-publish
   ```
 
-- In this repository, the environment `npm` takes only `v*` tags.
+- In this repository, the environment `npm` takes only the default branch (Settings → Environments → `npm` →
+  Deployment branches and tags: selected branches and tags, one rule, the default branch). That is what keeps a run
+  on any other branch from publishing. If the default branch is renamed, change the rule with it.

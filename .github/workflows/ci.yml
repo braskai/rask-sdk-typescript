@@ -29,6 +29,8 @@ jobs:
         node: [22, 24]
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
@@ -54,8 +56,11 @@ jobs:
         runtime: [node, bun, deno]
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/checkout@v5
         with:
+          persist-credentials: false
           repository: ${{ env.ACCEPTANCE_REPOSITORY }}
           path: .acceptance
       - uses: actions/setup-node@v5
