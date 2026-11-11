@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Rask, RaskConfigError, RaskError, UploadFailedError, type UploadSource } from '../src/index';
 import { BASE, json, type RecordedRequest, stubFetch, TEST_KEY, useHarness } from './helpers';
 
@@ -14,10 +14,15 @@ const sha = createHash('sha256').update(bytes).digest('hex');
 const scratch = mkdtempSync(join(tmpdir(), 'rask-upload-test-'));
 const path = join(scratch, 'clip.mp4');
 writeFileSync(path, bytes);
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+// The SDK copies a stream under the temporary directory. This file gets one of its own, so that what another process
+// copies there at the same time, or once left there, is not counted as a leftover of these tests.
+for (const name of ['TMPDIR', 'TMP', 'TEMP']) vi.stubEnv(name, scratch);
+afterAll(() => {
+  vi.unstubAllEnvs();
+  rmSync(scratch, { recursive: true, force: true });
+});
 
-const leftovers = () =>
-  readdirSync(tmpdir()).filter((name) => name.startsWith('rask-upload-') && !name.includes('test'));
+const leftovers = () => readdirSync(tmpdir()).filter((name) => name.startsWith('rask-upload-'));
 
 describe('uploads.uploadFile over HTTP', () => {
   const harness = useHarness();
@@ -216,6 +221,33 @@ describe('uploads.uploadFile with what the API may answer later', () => {
     const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch, timeoutSeconds: 0.05 });
     await expect(rask.uploads.uploadFile(bytes, { filename: 'a.mp4' })).resolves.toMatchObject({ status: 202 });
     expect(puts).toBe(2);
+  });
+
+  it('starts no idle timer once the PUT has ended, when the runtime still reads its body', async () => {
+    const transfer = {
+      method: 'single',
+      url: 'https://storage.example.com/x',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      headers: {},
+    };
+    let body: BodyInit | null | undefined;
+    const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/uploads')) return json(upload(transfer), 201);
+      if (String(input).endsWith('/complete')) return json({ id: 'job' }, 202);
+      // Storage answers before it has read the body.
+      body = init?.body;
+      return new Response('');
+    }) as typeof globalThis.fetch;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch });
+      await rask.uploads.uploadFile(bytes, { filename: 'a.mp4' });
+      // Node goes on reading the body after the answer. A timer started then would keep the process alive.
+      await new Response(body).arrayBuffer();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('stops on the caller signal', async () => {

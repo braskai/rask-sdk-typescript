@@ -323,8 +323,12 @@ export class Uploads extends UploadsResource {
     const idle = new AbortController();
     const idleMs = transport.timeoutSeconds * 1000;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let ended = false;
     const touch = () => {
       clearTimeout(timer);
+      // A runtime may go on reading the stream of a PUT that storage answered early. A timer started then would have
+      // nobody to clear it, and would keep the process alive.
+      if (ended) return;
       timer = setTimeout(() => idle.abort(new RaskTimeoutError({ message: 'The upload PUT stalled.' })), idleMs);
     };
     const signal = options.signal ? AbortSignal.any([idle.signal, options.signal]) : idle.signal;
@@ -360,6 +364,7 @@ export class Uploads extends UploadsResource {
       const reason = String(cause instanceof Error ? cause.message : cause).replaceAll(url, transport.redactUrl(url));
       return { status: undefined, text: '', cause: new Error(reason) };
     } finally {
+      ended = true;
       clearTimeout(timer);
     }
   }

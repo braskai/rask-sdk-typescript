@@ -154,10 +154,15 @@ describe('the key', () => {
     expect(new Rask({ baseUrl: BASE }).config.baseUrl).toBe(BASE);
   });
 
-  it('refuses control characters without echoing the key', () => {
-    expect(() => new Rask({ apiKey: `${TEST_KEY}\n`, baseUrl: BASE })).toThrow(RaskConfigError);
+  it.each([
+    ['a control character', '\n'],
+    // A key pasted from a page may end with one. No runtime puts it in a header, so no call could succeed.
+    ['a zero-width space', '\u200b'],
+    ['a letter outside ASCII', '\u00e9'],
+  ])('refuses %s without echoing the key', (_, character) => {
+    expect(() => new Rask({ apiKey: `${TEST_KEY}${character}`, baseUrl: BASE })).toThrow(RaskConfigError);
     try {
-      new Rask({ apiKey: `${TEST_KEY}\n`, baseUrl: BASE });
+      new Rask({ apiKey: `${TEST_KEY}${character}`, baseUrl: BASE });
     } catch (error) {
       expect(String(error)).not.toContain(TEST_KEY);
     }

@@ -35,6 +35,23 @@ describe('jobs.wait', () => {
     await expect(rask.jobs.wait('j')).rejects.toBeInstanceOf(JobCanceledError);
   });
 
+  it.each([
+    ['failed', JobFailedError],
+    ['canceled', JobCanceledError],
+  ])('raises a %s job at once, also when its problem has a status that a call retries', async (status, ErrorClass) => {
+    let calls = 0;
+    // A finished job answers the same on every poll, so taking it for an outage would poll until the deadline.
+    const fetch = (async () => {
+      calls += 1;
+      return job(status, { error: { status: 503, code: 'onscreen_provider_unavailable' } });
+    }) as typeof globalThis.fetch;
+    const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch });
+    const error = await rask.jobs.wait('j', { timeoutSeconds: 1 }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ErrorClass);
+    expect(error).toMatchObject({ status: 503, code: 'onscreen_provider_unavailable' });
+    expect(calls).toBe(1);
+  });
+
   it('keeps waiting through a status it does not know', async () => {
     const { rask, calls } = client([job('s12_new'), job('succeeded')]);
     await rask.jobs.wait('j');

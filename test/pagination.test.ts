@@ -78,4 +78,44 @@ describe('list operations', () => {
     };
     await expect(iterate()).rejects.toMatchObject({ code: 'nope' });
   });
+
+  it('stop with an error when a page answers with the cursor it was asked for with', async () => {
+    let calls = 0;
+    const fetch = (async () => {
+      calls += 1;
+      return json({ object: 'list', data: [{ id: `p${calls}` }], next_cursor: 'c2', has_more: true });
+    }) as typeof globalThis.fetch;
+    const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch });
+    const ids: string[] = [];
+    const iterate = async () => {
+      for await (const project of rask.projects.listProjects()) {
+        ids.push(project.id);
+        // Without the check the walk has no end, and this test has to have one.
+        if (ids.length === 10) break;
+      }
+    };
+    await expect(iterate()).rejects.toThrow('cursor');
+    expect(ids).toEqual(['p1', 'p2']);
+    expect(calls).toBe(2);
+  });
+
+  it('stop with an error when the cursors go round in a cycle', async () => {
+    let calls = 0;
+    const fetch = (async () => {
+      calls += 1;
+      // a, b, a, b: no page answers with the cursor it was asked for with.
+      return json({ object: 'list', data: [{ id: `p${calls}` }], next_cursor: calls % 2 ? 'a' : 'b', has_more: true });
+    }) as typeof globalThis.fetch;
+    const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch });
+    const ids: string[] = [];
+    const iterate = async () => {
+      for await (const project of rask.projects.listProjects()) {
+        ids.push(project.id);
+        if (ids.length === 10) break;
+      }
+    };
+    await expect(iterate()).rejects.toThrow('cursor');
+    expect(ids).toEqual(['p1', 'p2', 'p3']);
+    expect(calls).toBe(3);
+  });
 });

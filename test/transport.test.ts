@@ -205,6 +205,31 @@ describe('retries', () => {
     const { rask } = client([new Response('', { status, headers: { 'Retry-After': '999' } })]);
     await expect(rask.account.getMe()).rejects.toBeInstanceOf(ServiceUnavailableError);
   });
+
+  it('takes a redirect whose Location no URL can be made of as the answer, without a retry', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    try {
+      let calls = 0;
+      // No URL can be made of this Location, however often it is asked for.
+      const fetch = (async () => {
+        calls += 1;
+        return new Response(null, { status: 307, headers: { Location: 'http://[' } });
+      }) as typeof globalThis.fetch;
+      const rask = new Rask({ apiKey: TEST_KEY, baseUrl: BASE, fetch });
+      let outcome: unknown;
+      const call = rask.account.getMe().catch((caught: unknown) => {
+        outcome = caught;
+      });
+      await vi.advanceTimersByTimeAsync(130_000);
+      await call;
+      expect(outcome).toBeInstanceOf(RaskError);
+      expect(outcome).not.toBeInstanceOf(RaskConnectionError);
+      expect((outcome as RaskError).status).toBe(307);
+      expect(calls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('arguments', () => {

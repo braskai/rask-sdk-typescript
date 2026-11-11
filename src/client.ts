@@ -108,9 +108,11 @@ export class Rask extends RaskResources {
     }
     const apiKey = options.apiKey || readEnv('RASK_API_KEY');
     if (!apiKey) throw new RaskConfigError({ message: 'No API key: pass apiKey or set RASK_API_KEY.' });
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this looks for.
-    if (/[\x00-\x1f\x7f]/.test(apiKey)) {
-      throw new RaskConfigError({ message: 'The API key holds control characters. Check how it was read.' });
+    // A character outside ASCII may not fit a header at all, and a runtime's refusal of it can quote the whole key.
+    if (/[^\x20-\x7e]/.test(apiKey)) {
+      throw new RaskConfigError({
+        message: 'The API key holds control or non-ASCII characters. Check how it was read.',
+      });
     }
     const baseUrl = normalizeBaseUrl(options.baseUrl || readEnv('RASK_BASE_URL') || DEFAULT_BASE_URL);
     const timeoutSeconds = options.timeoutSeconds ?? DEFAULT_TIMEOUT_SECONDS;

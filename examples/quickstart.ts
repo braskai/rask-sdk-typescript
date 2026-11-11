@@ -29,6 +29,7 @@ export async function dub(rask: Rask, path: string, targetLanguage: string, outp
   const video = outputs.data.find((output) => output.kind === 'dubbed_video' && output.url);
   if (!video?.url) throw new Error('The project has no dubbed video yet.');
   const download = await fetch(video.url);
+  if (!download.ok) throw new Error(`The download answered ${download.status}.`);
   await writeFile(outputPath, new Uint8Array(await download.arrayBuffer()));
   return { projectId, outputPath };
 }

@@ -59,6 +59,8 @@ export class Jobs extends JobsResource {
         }
         waitMs = retryAfterMs(response.headers) ?? DEFAULT_POLL_MS;
       } catch (error) {
+        // The job's own end is no outage, whatever status its problem carries: a finished job answers the same again.
+        if (error instanceof JobFailedError || error instanceof JobCanceledError) throw error;
         if (deadline.aborted) throw new WaitTimeoutError(jobId, timeoutSeconds, last);
         if (!isTransient(error)) throw error;
         // The call already spent its retries. An outage shorter than the timeout still does not end the wait.

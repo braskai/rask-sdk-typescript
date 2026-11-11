@@ -2,7 +2,7 @@
 
 `@braskai/api` is the TypeScript client for the Rask API v3. It runs on Node 22+, Bun and Deno.
 
-This is an alpha, 3.0.0-alpha.0, like the API itself.
+This is an alpha, like the API itself.
 
 ```sh
 npm install @braskai/api
@@ -15,7 +15,8 @@ const rask = new Rask(); // RASK_API_KEY from the environment, or new Rask({ api
 const { data: me, status, requestId } = await rask.account.getMe();
 ```
 
-On Deno, grant `--allow-net --allow-env`, plus `--allow-read` for uploads from a path.
+On Deno, grant `--allow-net --allow-env`, plus `--allow-read` for uploads from a path. An upload from a stream goes
+through a temporary file, so it needs `--allow-read` and `--allow-write` for the temporary directory.
 
 ## Base URL
 
@@ -62,6 +63,7 @@ export async function dub(rask: Rask, path: string, targetLanguage: string, outp
   const video = outputs.data.find((output) => output.kind === 'dubbed_video' && output.url);
   if (!video?.url) throw new Error('The project has no dubbed video yet.');
   const download = await fetch(video.url);
+  if (!download.ok) throw new Error(`The download answered ${download.status}.`);
   await writeFile(outputPath, new Uint8Array(await download.arrayBuffer()));
   return { projectId, outputPath };
 }

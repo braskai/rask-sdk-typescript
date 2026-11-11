@@ -185,13 +185,17 @@ export class Transport {
     return url.pathname === prefix || url.pathname.startsWith(`${prefix}/`);
   }
 
-  /** A request and its redirects. The key travels only to the base URL's origin, under its path. */
+  /**
+   * A request and its redirects. The key travels only to the base URL's origin, under its path. `failed` names what a
+   * failure of the network is raised as. Anything else thrown here is raised as it is: no retry would mend it.
+   */
   async #send(
     method: string,
     url: string,
     headers: Headers,
     body: string | undefined,
     signal: AbortSignal,
+    failed: (cause: unknown) => unknown,
     hop = 0,
   ): Promise<Response> {
     const target = new URL(url);
@@ -203,20 +207,27 @@ export class Transport {
     this.log(
       `> ${method} ${this.redactUrl(url)} authorization=${outgoing.has('Authorization') ? '[redacted]' : 'none'}`,
     );
-    const fetched = await this.fetch(url, {
-      method,
-      headers: outgoing,
-      body: body ?? null,
-      redirect: 'manual',
-      signal,
-    });
-    // Read here, so a connection lost in mid-body is one more connection error and the timeout covers the body.
-    const bytes = await fetched.arrayBuffer();
+    let fetched: Response;
+    let bytes: ArrayBuffer;
+    try {
+      fetched = await this.fetch(url, {
+        method,
+        headers: outgoing,
+        body: body ?? null,
+        redirect: 'manual',
+        signal,
+      });
+      // Read here, so a connection lost in mid-body is one more connection error and the timeout covers the body.
+      bytes = await fetched.arrayBuffer();
+    } catch (cause) {
+      throw failed(cause);
+    }
     const requestId = fetched.headers.get('x-request-id') ?? '-';
     this.log(`< ${fetched.status} ${method} ${this.redactUrl(url)} ${Date.now() - started}ms request_id=${requestId}`);
 
     const location = fetched.headers.get('location');
-    if (REDIRECT_STATUSES.has(fetched.status) && location && hop < MAX_REDIRECTS) {
+    // A Location no URL can be made of is not followed, like one that is not HTTP: the redirect is the answer.
+    if (REDIRECT_STATUSES.has(fetched.status) && location && hop < MAX_REDIRECTS && URL.canParse(location, url)) {
       const next = new URL(location, url);
       if (next.protocol === 'http:' || next.protocol === 'https:') {
         // The fetch standard's rule: 303 turns anything but GET and HEAD into GET, and 301 or 302 a POST.
@@ -233,6 +244,7 @@ export class Transport {
           nextHeaders,
           toGet ? undefined : body,
           signal,
+          failed,
           hop + 1,
         );
       }
@@ -247,15 +259,14 @@ export class Transport {
   async #dispatch(request: Request, timeout: AbortSignal, caller: AbortSignal | undefined) {
     const signal = caller ? AbortSignal.any([timeout, caller]) : timeout;
     const body = request.body ? await request.text() : undefined;
-    try {
-      return await this.#send(request.method, request.url, request.headers, body, signal);
-    } catch (cause) {
-      if (caller?.aborted) throw caller.reason;
+    const failed = (cause: unknown): unknown => {
+      if (caller?.aborted) return caller.reason;
       const url = this.redactUrl(request.url);
-      if (timeout.aborted) throw new RaskTimeoutError({ message: `${request.method} ${url} timed out`, cause });
+      if (timeout.aborted) return new RaskTimeoutError({ message: `${request.method} ${url} timed out`, cause });
       const reason = cause instanceof Error ? cause.message : String(cause);
-      throw new RaskConnectionError({ message: `${request.method} ${url} failed: ${reason}`, cause });
-    }
+      return new RaskConnectionError({ message: `${request.method} ${url} failed: ${reason}`, cause });
+    };
+    return this.#send(request.method, request.url, request.headers, body, signal, failed);
   }
 
   #warn(operationId: string, headers: Headers): void {

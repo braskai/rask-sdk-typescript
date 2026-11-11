@@ -1,3 +1,4 @@
+import { RaskError } from './errors';
 import type { RaskResponse } from './transport';
 
 /** The list envelope every paged operation answers with. */
@@ -57,8 +58,23 @@ export class Page<L extends ListBody> implements RaskResponse<L>, AsyncIterable<
 
   async *[Symbol.asyncIterator](): AsyncGenerator<ListItem<L>, void, undefined> {
     let page: Page<L> | null = this;
+    // Every cursor the server has given on this walk, not only the last: a cycle such as A, B, A never repeats one in
+    // a row.
+    const given = new Set<string>();
     while (page) {
       yield* page.items;
+      const next = page.nextCursor;
+      if (next !== null) {
+        // Following a cursor a second time would get the same pages, for ever.
+        if (given.has(next)) {
+          throw new RaskError({
+            status: page.status,
+            headers: page.headers,
+            message: 'The list gave a cursor it had already given, so walking it would never end.',
+          });
+        }
+        given.add(next);
+      }
       page = await page.nextPage();
     }
   }
