@@ -1,0 +1,2529 @@
+# What this SDK changes in the contract before generating (an OpenAPI Overlay 1.0 document).
+# Open enums: each open enum X (x-rask-open-enum) becomes anyOf [XKnown, string], so a value this version does not know
+# survives in a response. Request-side references switch to XKnown, so requests stay closed.
+# Unknown union variants (x-rask-open-union) are kept by the hand-written layer.
+# Idempotency-Key is optional in SDK signatures: the SDK generates a UUIDv4 per call and keeps it across retries.
+# It names every open enum of the contract, so it changes with them: `npm run generate` stops on a target it cannot find.
+overlay: 1.0.0
+info:
+  title: 'Rask API v3: SDK fallback generators (hey-api, openapi-python-client, Kiota)'
+  version: 1.0.0
+actions:
+- target: $.components.schemas
+  description: 'SDK-1: closed list of AppliedDubMode values known to this SDK version'
+  update:
+    AppliedDubModeKnown:
+      type: string
+      description: Values of AppliedDubMode known to this SDK version.
+      enum:
+      - full
+      - changed_segments
+- target: $.components.schemas.AppliedDubMode
+  description: 'SDK-1: AppliedDubMode becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: AppliedDubMode = anyOf [AppliedDubModeKnown, string]'
+  update:
+    AppliedDubMode:
+      anyOf:
+      - $ref: '#/components/schemas/AppliedDubModeKnown'
+      - type: string
+      description: |-
+        Dub mode the server applies.
+
+        - `full`: every segment
+        - `changed_segments`: only changed segments
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of AutoDubResultState values known to this SDK version'
+  update:
+    AutoDubResultStateKnown:
+      type: string
+      description: Values of AutoDubResultState known to this SDK version.
+      enum:
+      - not_requested
+      - dispatched
+      - skipped
+- target: $.components.schemas.AutoDubResultState
+  description: 'SDK-1: AutoDubResultState becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: AutoDubResultState = anyOf [AutoDubResultStateKnown, string]'
+  update:
+    AutoDubResultState:
+      anyOf:
+      - $ref: '#/components/schemas/AutoDubResultStateKnown'
+      - type: string
+      description: |-
+        Auto-dub outcome of a processing run.
+
+        - `not_requested`: not requested
+        - `dispatched`: a dub job was started
+        - `skipped`: skipped; see skipped_reason
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of AutoDubSkippedReason values known to this SDK version'
+  update:
+    AutoDubSkippedReasonKnown:
+      type: string
+      description: Values of AutoDubSkippedReason known to this SDK version.
+      enum:
+      - insufficient_balance
+      - cost_changed
+- target: $.components.schemas.AutoDubSkippedReason
+  description: 'SDK-1: AutoDubSkippedReason becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: AutoDubSkippedReason = anyOf [AutoDubSkippedReasonKnown, string]'
+  update:
+    AutoDubSkippedReason:
+      anyOf:
+      - $ref: '#/components/schemas/AutoDubSkippedReasonKnown'
+      - type: string
+      description: |-
+        Why auto-dub was skipped (nothing was charged).
+
+        - `insufficient_balance`: too few minutes at dispatch
+        - `cost_changed`: the price at dispatch exceeded the stored cap
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of AutoDubState values known to this SDK version'
+  update:
+    AutoDubStateKnown:
+      type: string
+      description: Values of AutoDubState known to this SDK version.
+      enum:
+      - not_requested
+      - pending
+      - dispatched
+      - skipped
+- target: $.components.schemas.AutoDubState
+  description: 'SDK-1: AutoDubState becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: AutoDubState = anyOf [AutoDubStateKnown, string]'
+  update:
+    AutoDubState:
+      anyOf:
+      - $ref: '#/components/schemas/AutoDubStateKnown'
+      - type: string
+      description: |-
+        Auto-dub state.
+
+        - `not_requested`: auto-dub was not requested
+        - `pending`: waits for translation
+        - `dispatched`: the dub job was started
+        - `skipped`: skipped; see skipped_reason
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of BillingInterval values known to this SDK version'
+  update:
+    BillingIntervalKnown:
+      type: string
+      description: Values of BillingInterval known to this SDK version.
+      enum:
+      - day
+      - week
+      - month
+      - year
+- target: $.components.schemas.BillingInterval
+  description: 'SDK-1: BillingInterval becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: BillingInterval = anyOf [BillingIntervalKnown, string]'
+  update:
+    BillingInterval:
+      anyOf:
+      - $ref: '#/components/schemas/BillingIntervalKnown'
+      - type: string
+      description: |-
+        Billing interval of the subscription.
+
+        - `day`: daily
+        - `week`: weekly
+        - `month`: monthly
+        - `year`: yearly
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ChargedWhen values known to this SDK version'
+  update:
+    ChargedWhenKnown:
+      type: string
+      description: Values of ChargedWhen known to this SDK version.
+      enum:
+      - on_request
+      - after_translation
+      - after_first_dub
+      - at_stage_start
+- target: $.components.schemas.ChargedWhen
+  description: 'SDK-1: ChargedWhen becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ChargedWhen = anyOf [ChargedWhenKnown, string]'
+  update:
+    ChargedWhen:
+      anyOf:
+      - $ref: '#/components/schemas/ChargedWhenKnown'
+      - type: string
+      description: |-
+        When a cost line is charged.
+
+        - `on_request`: when the request is accepted
+        - `after_translation`: when auto-dub starts after translation
+        - `after_first_dub`: when on-screen auto-start fires after the first dub
+        - `at_stage_start`: when a stage of a localization run starts
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of CredentialKind values known to this SDK version'
+  update:
+    CredentialKindKnown:
+      type: string
+      description: Values of CredentialKind known to this SDK version.
+      enum:
+      - api_key
+      - oauth
+- target: $.components.schemas.CredentialKind
+  description: 'SDK-1: CredentialKind becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: CredentialKind = anyOf [CredentialKindKnown, string]'
+  update:
+    CredentialKind:
+      anyOf:
+      - $ref: '#/components/schemas/CredentialKindKnown'
+      - type: string
+      description: |-
+        Kind of the calling credential.
+
+        - `api_key`: an API key created in Settings -> API keys
+        - `oauth`: an app connected through the hosted MCP server's browser login
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of CreditType values known to this SDK version'
+  update:
+    CreditTypeKnown:
+      type: string
+      description: Values of CreditType known to this SDK version.
+      enum:
+      - minutes
+      - lipsync_free_minutes
+      - projects
+- target: $.components.schemas.CreditType
+  description: 'SDK-1: CreditType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: CreditType = anyOf [CreditTypeKnown, string]'
+  update:
+    CreditType:
+      anyOf:
+      - $ref: '#/components/schemas/CreditTypeKnown'
+      - type: string
+      description: |-
+        A credit pool. Money-shaped schemas are unions on this value.
+
+        - `minutes`: the main minute pool
+        - `lipsync_free_minutes`: free lip-sync minutes
+        - `projects`: the project-credit pool; counts projects, not minutes
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of DubEngine values known to this SDK version'
+  update:
+    DubEngineKnown:
+      type: string
+      description: Values of DubEngine known to this SDK version.
+      enum:
+      - meaning_first
+      - legacy
+- target: $.components.schemas.DubEngine
+  description: 'SDK-1: DubEngine becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: DubEngine = anyOf [DubEngineKnown, string]'
+  update:
+    DubEngine:
+      anyOf:
+      - $ref: '#/components/schemas/DubEngineKnown'
+      - type: string
+      description: |-
+        Voice-over engine.
+
+        - `meaning_first`: meaning-first engine
+        - `legacy`: legacy engine
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of DubMode values known to this SDK version'
+  update:
+    DubModeKnown:
+      type: string
+      description: Values of DubMode known to this SDK version.
+      enum:
+      - auto
+      - full
+      - changed_segments
+- target: $.components.schemas.DubMode
+  description: 'SDK-1: DubMode becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: DubMode = anyOf [DubModeKnown, string]'
+  update:
+    DubMode:
+      anyOf:
+      - $ref: '#/components/schemas/DubModeKnown'
+      - type: string
+      description: |-
+        Requested dub mode.
+
+        - `auto`: full when needed, otherwise changed_segments (default)
+        - `full`: re-voice every segment
+        - `changed_segments`: only outdated and not-dubbed segments: voiced, or merged from a current clip
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of DubState values known to this SDK version'
+  update:
+    DubStateKnown:
+      type: string
+      description: Values of DubState known to this SDK version.
+      enum:
+      - not_dubbed
+      - current
+      - outdated
+- target: $.components.schemas.DubState
+  description: 'SDK-1: DubState becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: DubState = anyOf [DubStateKnown, string]'
+  update:
+    DubState:
+      anyOf:
+      - $ref: '#/components/schemas/DubStateKnown'
+      - type: string
+      description: |-
+        Dub state of a segment.
+
+        - `not_dubbed`: the project has no dub of this segment
+        - `current`: the dub matches the segment
+        - `outdated`: the next changed_segments dub includes it: voiced, or merged from its current clip
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of DubbingModel values known to this SDK version'
+  update:
+    DubbingModelKnown:
+      type: string
+      description: Values of DubbingModel known to this SDK version.
+      enum:
+      - v1
+      - v2
+- target: $.components.schemas.DubbingModel
+  description: 'SDK-1: DubbingModel becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: DubbingModel = anyOf [DubbingModelKnown, string]'
+  update:
+    DubbingModel:
+      anyOf:
+      - $ref: '#/components/schemas/DubbingModelKnown'
+      - type: string
+      description: |-
+        Dubbing model.
+
+        - `v1`: the legacy dubbing engine
+        - `v2`: meaning-first dubbing (Dubbing 2.0)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of DubbingModelOverrideReason values known to this SDK version'
+  update:
+    DubbingModelOverrideReasonKnown:
+      type: string
+      description: Values of DubbingModelOverrideReason known to this SDK version.
+      enum:
+      - trial_rules
+      - meaning_first_disabled
+      - language_requires_v2
+      - language_not_supported
+      - free_dubbing
+- target: $.components.schemas.DubbingModelOverrideReason
+  description: 'SDK-1: DubbingModelOverrideReason becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: DubbingModelOverrideReason = anyOf [DubbingModelOverrideReasonKnown, string]'
+  update:
+    DubbingModelOverrideReason:
+      anyOf:
+      - $ref: '#/components/schemas/DubbingModelOverrideReasonKnown'
+      - type: string
+      description: |-
+        Why the effective dubbing model differs from the requested one, or from the default `v2` when the request named none. These are the allowed fallbacks.
+
+        - `trial_rules`: trial projects follow the trial engine rule
+        - `meaning_first_disabled`: meaning-first dubbing is switched off for paid projects
+        - `language_requires_v2`: the language runs only on v2, although v1 was requested
+        - `language_not_supported`: v2 was requested, but the language or its voices run only on v1
+        - `free_dubbing`: the free dubbing variant runs on v1
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of EditWarningCode values known to this SDK version'
+  update:
+    EditWarningCodeKnown:
+      type: string
+      description: Values of EditWarningCode known to this SDK version.
+      enum:
+      - overlaps_segment
+      - translation_empty
+      - long_segment
+      - meaning_first_disabled
+- target: $.components.schemas.EditWarningCode
+  description: 'SDK-1: EditWarningCode becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: EditWarningCode = anyOf [EditWarningCodeKnown, string]'
+  update:
+    EditWarningCode:
+      anyOf:
+      - $ref: '#/components/schemas/EditWarningCodeKnown'
+      - type: string
+      description: |-
+        Non-blocking warning code.
+
+        - `overlaps_segment`: the segment overlaps another one
+        - `translation_empty`: the segment has no translation
+        - `long_segment`: the segment is longer than 30 s
+        - `meaning_first_disabled`: a voice with `meaning_first_compatible: false` moves the project to the legacy engine
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of EntitlementFeature values known to this SDK version'
+  update:
+    EntitlementFeatureKnown:
+      type: string
+      description: Values of EntitlementFeature known to this SDK version.
+      enum:
+      - api_access
+      - auto_dub
+      - dubbing_model_choice
+      - free_languages
+      - glossary
+      - translation_instructions
+      - subtitle_import
+      - subtitle_reimport
+      - subtitle_download
+      - burned_subtitles
+      - audio_download
+      - multilanguage
+      - lipsync
+      - lipsync_paid
+      - lipsync_enhanced
+      - lipsync_download
+      - onscreen
+      - voice_clones
+      - instant_voice_clone
+      - share_links
+- target: $.components.schemas.EntitlementFeature
+  description: 'SDK-1: EntitlementFeature becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: EntitlementFeature = anyOf [EntitlementFeatureKnown, string]'
+  update:
+    EntitlementFeature:
+      anyOf:
+      - $ref: '#/components/schemas/EntitlementFeatureKnown'
+      - type: string
+      description: |-
+        A plan feature checked server-side on the payer's plan (403 `feature_not_in_plan`).
+
+        - `api_access`: use the API at all (checked on every request)
+        - `auto_dub`: dub automatically after processing (needs an active subscription)
+        - `dubbing_model_choice`: choose the dubbing model; otherwise it is overridden (estimate notice)
+        - `free_languages`: free_dubbing language variants
+        - `glossary`: attach and manage glossaries
+        - `translation_instructions`: custom translation instructions
+        - `subtitle_import`: import SRT subtitles when creating a project
+        - `subtitle_reimport`: replace a project's transcript from SRT (importTranscript)
+        - `subtitle_download`: download subtitles (getProjectSubtitles, subtitle outputs)
+        - `burned_subtitles`: export and download videos with burned-in subtitles
+        - `audio_download`: download dubbed audio and the voice track
+        - `multilanguage`: several target languages per media (copies)
+        - `lipsync`: lip-sync
+        - `lipsync_paid`: paid lip-sync runs (otherwise only the free run)
+        - `lipsync_enhanced`: the Enhanced lip-sync model
+        - `lipsync_download`: download lip-synced video
+        - `onscreen`: on-screen text translation and download of its video
+        - `voice_clones`: workspace voice clones
+        - `instant_voice_clone`: a speaker's own cloned voice
+        - `share_links`: revocable project share links
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of EntitlementReason values known to this SDK version'
+  update:
+    EntitlementReasonKnown:
+      type: string
+      description: Values of EntitlementReason known to this SDK version.
+      enum:
+      - not_in_plan
+      - subscription_inactive
+      - temporarily_disabled
+- target: $.components.schemas.EntitlementReason
+  description: 'SDK-1: EntitlementReason becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: EntitlementReason = anyOf [EntitlementReasonKnown, string]'
+  update:
+    EntitlementReason:
+      anyOf:
+      - $ref: '#/components/schemas/EntitlementReasonKnown'
+      - type: string
+      description: |-
+        Why an entitlement is disabled.
+
+        - `not_in_plan`: the plan does not include the feature
+        - `subscription_inactive`: the payer's subscription is not active
+        - `temporarily_disabled`: Rask turned the feature off for now
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of EstimateAction values known to this SDK version'
+  update:
+    EstimateActionKnown:
+      type: string
+      description: Values of EstimateAction known to this SDK version.
+      enum:
+      - create_project
+      - create_project_copies
+      - dub
+      - lipsync
+      - onscreen
+      - segment_generation
+      - localization
+- target: $.components.schemas.EstimateAction
+  description: 'SDK-1: EstimateAction becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: EstimateAction = anyOf [EstimateActionKnown, string]'
+  update:
+    EstimateAction:
+      anyOf:
+      - $ref: '#/components/schemas/EstimateActionKnown'
+      - type: string
+      description: |-
+        The action an estimate prices. Discriminator of `details`.
+
+        - `create_project`: createProject
+        - `create_project_copies`: createProjectCopies
+        - `dub`: createDub
+        - `lipsync`: createLipsync
+        - `onscreen`: createOnscreen
+        - `segment_generation`: generateSegments
+        - `localization`: createLocalization, resumeJob
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ExportSourceVideo values known to this SDK version'
+  update:
+    ExportSourceVideoKnown:
+      type: string
+      description: Values of ExportSourceVideo known to this SDK version.
+      enum:
+      - dubbed
+      - lipsync
+- target: $.components.schemas.ExportSourceVideo
+  description: 'SDK-1: ExportSourceVideo becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ExportSourceVideo = anyOf [ExportSourceVideoKnown, string]'
+  update:
+    ExportSourceVideo:
+      anyOf:
+      - $ref: '#/components/schemas/ExportSourceVideoKnown'
+      - type: string
+      description: |-
+        Video to export from.
+
+        - `dubbed`: the dubbed video
+        - `lipsync`: the lip-synced video
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ExportType values known to this SDK version'
+  update:
+    ExportTypeKnown:
+      type: string
+      description: Values of ExportType known to this SDK version.
+      enum:
+      - burned_subtitles
+- target: $.components.schemas.ExportType
+  description: 'SDK-1: ExportType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ExportType = anyOf [ExportTypeKnown, string]'
+  update:
+    ExportType:
+      anyOf:
+      - $ref: '#/components/schemas/ExportTypeKnown'
+      - type: string
+      description: |-
+        Export type.
+
+        - `burned_subtitles`: a video with burned-in target subtitles
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of GenerationSynthesisScope values known to this SDK version'
+  update:
+    GenerationSynthesisScopeKnown:
+      type: string
+      description: Values of GenerationSynthesisScope known to this SDK version.
+      enum:
+      - requested_segments
+- target: $.components.schemas.GenerationSynthesisScope
+  description: 'SDK-1: GenerationSynthesisScope becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: GenerationSynthesisScope = anyOf [GenerationSynthesisScopeKnown, string]'
+  update:
+    GenerationSynthesisScope:
+      anyOf:
+      - $ref: '#/components/schemas/GenerationSynthesisScopeKnown'
+      - type: string
+      description: |-
+        What a segment generation synthesizes.
+
+        - `requested_segments`: speech is synthesized only for the chosen segments
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of GenerationVoiceSetupScope values known to this SDK version'
+  update:
+    GenerationVoiceSetupScopeKnown:
+      type: string
+      description: Values of GenerationVoiceSetupScope known to this SDK version.
+      enum:
+      - requested_speakers
+      - all_cloned_speakers
+- target: $.components.schemas.GenerationVoiceSetupScope
+  description: 'SDK-1: GenerationVoiceSetupScope becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: GenerationVoiceSetupScope = anyOf [GenerationVoiceSetupScopeKnown, string]'
+  update:
+    GenerationVoiceSetupScope:
+      anyOf:
+      - $ref: '#/components/schemas/GenerationVoiceSetupScopeKnown'
+      - type: string
+      description: |-
+        What a segment generation reads to prepare its voices. This work is not charged.
+
+        - `requested_speakers`: only the speakers of the chosen segments
+        - `all_cloned_speakers`: the legacy engine with a cloned voice, or a voice with `meaning_first_compatible: false`, may read the project's speech and prepare every cloned speaker; reported whenever this is possible, because whether a clone is already prepared cannot be told in advance
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of GrantSource values known to this SDK version'
+  update:
+    GrantSourceKnown:
+      type: string
+      description: Values of GrantSource known to this SDK version.
+      enum:
+      - plan_cycle
+      - purchase
+      - legacy
+      - adjustment
+      - trial
+- target: $.components.schemas.GrantSource
+  description: 'SDK-1: GrantSource becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: GrantSource = anyOf [GrantSourceKnown, string]'
+  update:
+    GrantSource:
+      anyOf:
+      - $ref: '#/components/schemas/GrantSourceKnown'
+      - type: string
+      description: |-
+        Origin of a credit grant.
+
+        - `plan_cycle`: minutes included in a plan cycle
+        - `purchase`: a top-up or booster purchase
+        - `legacy`: migrated from the old balance
+        - `adjustment`: a manual adjustment by Rask
+        - `trial`: trial minutes
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of InstantCloneIneligibleReason values known to this SDK version'
+  update:
+    InstantCloneIneligibleReasonKnown:
+      type: string
+      description: Values of InstantCloneIneligibleReason known to this SDK version.
+      enum:
+      - insufficient_speech
+      - language_not_supported
+      - provider_not_supported
+- target: $.components.schemas.InstantCloneIneligibleReason
+  description: 'SDK-1: InstantCloneIneligibleReason becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: InstantCloneIneligibleReason = anyOf [InstantCloneIneligibleReasonKnown, string]'
+  update:
+    InstantCloneIneligibleReason:
+      anyOf:
+      - $ref: '#/components/schemas/InstantCloneIneligibleReasonKnown'
+      - type: string
+      description: |-
+        Why the instant clone is unavailable.
+
+        - `insufficient_speech`: the speaker has too little speech
+        - `language_not_supported`: the language has no clone support
+        - `provider_not_supported`: the project's voice provider cannot clone
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of JobChannel values known to this SDK version'
+  update:
+    JobChannelKnown:
+      type: string
+      description: Values of JobChannel known to this SDK version.
+      enum:
+      - api
+      - mcp
+      - system
+- target: $.components.schemas.JobChannel
+  description: 'SDK-1: JobChannel becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: JobChannel = anyOf [JobChannelKnown, string]'
+  update:
+    JobChannel:
+      anyOf:
+      - $ref: '#/components/schemas/JobChannelKnown'
+      - type: string
+      description: |-
+        Who started a job.
+        - `api`: REST API v3
+        - `mcp`: the Rask MCP server
+        - `system`: automatic (auto-dub, on-screen auto-start, the stages of a localization run)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of JobNoticeCode values known to this SDK version'
+  update:
+    JobNoticeCodeKnown:
+      type: string
+      description: Values of JobNoticeCode known to this SDK version.
+      enum:
+      - dubbing_model_overridden
+      - meaning_first_disabled
+      - voice_fallback
+      - speaker_voice_unused
+      - speaker_voice_not_applied
+- target: $.components.schemas.JobNoticeCode
+  description: 'SDK-1: JobNoticeCode becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: JobNoticeCode = anyOf [JobNoticeCodeKnown, string]'
+  update:
+    JobNoticeCode:
+      anyOf:
+      - $ref: '#/components/schemas/JobNoticeCodeKnown'
+      - type: string
+      description: |-
+        A non-blocking fact about how a job ran.
+
+        - `dubbing_model_overridden`: the effective dubbing model differs from the requested one, or from the default `v2` when the request named none (see `dubbing_model_override_reason`)
+        - `meaning_first_disabled`: meaning-first translation or dubbing is switched off, so the legacy path ran
+        - `voice_fallback`: the project uses dubbing model v2, but a voice that is not `meaning_first_compatible` sent this voiceover to the legacy engine
+        - `speaker_voice_unused`: a `speaker_voices` entry names a speaker the transcript does not have; the entry was ignored
+        - `speaker_voice_not_applied`: a `speaker_voices` clone could not be applied once speakers were known (too little speech, daily clone quota); the speaker keeps the suggested voice
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of JobStage values known to this SDK version'
+  update:
+    JobStageKnown:
+      type: string
+      description: Values of JobStage known to this SDK version.
+      enum:
+      - queued
+      - uploading
+      - transcribing
+      - separating_audio
+      - detecting_speakers
+      - matching_voices
+      - translating
+      - voicing
+      - merging
+      - downloading
+      - extracting_audio
+      - face_check
+      - waiting_for_worker
+      - rendering
+      - charging
+      - waiting_for_runner
+      - starting
+      - preparing
+      - checking
+      - publishing
+      - cloning
+      - restoring
+- target: $.components.schemas.JobStage
+  description: 'SDK-1: JobStage becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: JobStage = anyOf [JobStageKnown, string]'
+  update:
+    JobStage:
+      anyOf:
+      - $ref: '#/components/schemas/JobStageKnown'
+      - type: string
+      description: |-
+        Per-type job stage. Open enum.
+
+        - `queued`: project_processing: queued
+        - `uploading`: project_processing: copying media; onscreen: uploading the result
+        - `transcribing`: project_processing: speech recognition
+        - `separating_audio`: project_processing: separation
+        - `detecting_speakers`: project_processing: speakers
+        - `matching_voices`: project_processing: voice matching
+        - `translating`: project_processing, translation, onscreen: translating
+        - `voicing`: dub, segment_generation: generating speech
+        - `merging`: dub: rendering
+        - `downloading`: media_import: downloading or probing
+        - `extracting_audio`: media_import: extracting the audio of a video voice sample
+        - `face_check`: lipsync: checking for a face
+        - `waiting_for_worker`: lipsync: queued for a worker
+        - `rendering`: lipsync, export: rendering
+        - `charging`: onscreen: committing the charge
+        - `waiting_for_runner`: onscreen: queued for a runner
+        - `starting`: onscreen: preparing the runner
+        - `preparing`: onscreen: preparing the video
+        - `checking`: onscreen: checking the result
+        - `publishing`: onscreen: publishing the result
+        - `cloning`: voice_clone: cloning
+        - `restoring`: file_restore: restoring from archive
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of JobStatus values known to this SDK version'
+  update:
+    JobStatusKnown:
+      type: string
+      description: Values of JobStatus known to this SDK version.
+      enum:
+      - queued
+      - running
+      - succeeded
+      - failed
+      - canceled
+- target: $.components.schemas.JobStatus
+  description: 'SDK-1: JobStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: JobStatus = anyOf [JobStatusKnown, string]'
+  update:
+    JobStatus:
+      anyOf:
+      - $ref: '#/components/schemas/JobStatusKnown'
+      - type: string
+      description: |-
+        Job status. Monotonic: never goes backwards and never leaves a terminal state.
+
+        - `queued`: accepted, not started
+        - `running`: in progress
+        - `succeeded`: finished; see result
+        - `failed`: finished; see error
+        - `canceled`: canceled, or its project was deleted (`error.code = project_deleted`)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of JobType values known to this SDK version'
+  update:
+    JobTypeKnown:
+      type: string
+      description: Values of JobType known to this SDK version.
+      enum:
+      - media_import
+      - project_processing
+      - translation
+      - segment_generation
+      - dub
+      - lipsync
+      - onscreen
+      - localization
+      - voice_clone
+      - export
+      - file_restore
+- target: $.components.schemas.JobType
+  description: 'SDK-1: JobType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: JobType = anyOf [JobTypeKnown, string]'
+  update:
+    JobType:
+      anyOf:
+      - $ref: '#/components/schemas/JobTypeKnown'
+      - type: string
+      description: |-
+        Job type. Open enum: new types are added over time.
+
+        - `media_import`: registering uploaded or imported media (poll hint 3 s; cancelable)
+        - `project_processing`: the project pipeline up to translation (poll hint 10 s)
+        - `translation`: retranslating segments (poll hint 5 s)
+        - `segment_generation`: paid voicing of chosen segments into downloadable clips (poll hint 5 s)
+        - `dub`: dubbing or redubbing (poll hint 10 s)
+        - `lipsync`: lip-sync (poll hint 30 s)
+        - `onscreen`: on-screen text translation (poll hint 15 s; cancelable while queued)
+        - `localization`: dub, lip-sync and on-screen as one run with child jobs (poll hint 15 s)
+        - `voice_clone`: creating a voice clone (poll hint 10 s)
+        - `export`: rendering an export (poll hint 15 s)
+        - `file_restore`: restoring archived files (poll hint 300 s)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of LanguageVariant values known to this SDK version'
+  update:
+    LanguageVariantKnown:
+      type: string
+      description: Values of LanguageVariant known to this SDK version.
+      enum:
+      - standard
+      - free
+- target: $.components.schemas.LanguageVariant
+  description: 'SDK-1: LanguageVariant becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: LanguageVariant = anyOf [LanguageVariantKnown, string]'
+  update:
+    LanguageVariant:
+      anyOf:
+      - $ref: '#/components/schemas/LanguageVariantKnown'
+      - type: string
+      description: |-
+        Language variant. A language is identified by (code, variant).
+
+        - `standard`: the standard variant
+        - `free`: the free dubbing variant (needs free_languages)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of LipsyncModel values known to this SDK version'
+  update:
+    LipsyncModelKnown:
+      type: string
+      description: Values of LipsyncModel known to this SDK version.
+      enum:
+      - legacy
+      - enhanced
+- target: $.components.schemas.LipsyncModel
+  description: 'SDK-1: LipsyncModel becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: LipsyncModel = anyOf [LipsyncModelKnown, string]'
+  update:
+    LipsyncModel:
+      anyOf:
+      - $ref: '#/components/schemas/LipsyncModelKnown'
+      - type: string
+      description: |-
+        Lip-sync model.
+
+        - `legacy`: the Legacy model
+        - `enhanced`: the Enhanced model
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of LipsyncPreviousRun values known to this SDK version'
+  update:
+    LipsyncPreviousRunKnown:
+      type: string
+      description: Values of LipsyncPreviousRun known to this SDK version.
+      enum:
+      - none
+      - current
+      - outdated
+      - failed
+- target: $.components.schemas.LipsyncPreviousRun
+  description: 'SDK-1: LipsyncPreviousRun becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: LipsyncPreviousRun = anyOf [LipsyncPreviousRunKnown, string]'
+  update:
+    LipsyncPreviousRun:
+      anyOf:
+      - $ref: '#/components/schemas/LipsyncPreviousRunKnown'
+      - type: string
+      description: |-
+        State of the previous lip-sync run.
+
+        - `none`: no run yet
+        - `current`: a run for the current dub
+        - `outdated`: a run for an older dub
+        - `failed`: the last run failed
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of LocalizationStageName values known to this SDK version'
+  update:
+    LocalizationStageNameKnown:
+      type: string
+      description: Values of LocalizationStageName known to this SDK version.
+      enum:
+      - dub
+      - lipsync
+      - onscreen
+- target: $.components.schemas.LocalizationStageName
+  description: 'SDK-1: LocalizationStageName becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: LocalizationStageName = anyOf [LocalizationStageNameKnown, string]'
+  update:
+    LocalizationStageName:
+      anyOf:
+      - $ref: '#/components/schemas/LocalizationStageNameKnown'
+      - type: string
+      description: |-
+        A stage of a `localization` job. They always run in this order, each on the previous result.
+
+        - `dub`: dub or redub
+        - `lipsync`: lip-sync of the dubbed video
+        - `onscreen`: on-screen text translation of the latest video
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of LocalizationStageNotRunReason values known to this SDK version'
+  update:
+    LocalizationStageNotRunReasonKnown:
+      type: string
+      description: Values of LocalizationStageNotRunReason known to this SDK version.
+      enum:
+      - already_succeeded
+      - dub_up_to_date
+      - lipsync_up_to_date
+      - onscreen_up_to_date
+- target: $.components.schemas.LocalizationStageNotRunReason
+  description: 'SDK-1: LocalizationStageNotRunReason becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: LocalizationStageNotRunReason = anyOf [LocalizationStageNotRunReasonKnown, string]'
+  update:
+    LocalizationStageNotRunReason:
+      anyOf:
+      - $ref: '#/components/schemas/LocalizationStageNotRunReasonKnown'
+      - type: string
+      description: |-
+        Why an estimate prices a stage at 0.
+
+        - `already_succeeded`: it succeeded in the run being resumed
+        - `dub_up_to_date`: nothing changed, so the current dub is reused
+        - `lipsync_up_to_date`: a paid lip-sync of the same model is current, so it is reused
+        - `onscreen_up_to_date`: a finished on-screen run over the same source is current, so it is reused
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of LocalizationStageStatus values known to this SDK version'
+  update:
+    LocalizationStageStatusKnown:
+      type: string
+      description: Values of LocalizationStageStatus known to this SDK version.
+      enum:
+      - pending
+      - running
+      - succeeded
+      - failed
+      - skipped
+- target: $.components.schemas.LocalizationStageStatus
+  description: 'SDK-1: LocalizationStageStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: LocalizationStageStatus = anyOf [LocalizationStageStatusKnown, string]'
+  update:
+    LocalizationStageStatus:
+      anyOf:
+      - $ref: '#/components/schemas/LocalizationStageStatusKnown'
+      - type: string
+      description: |-
+        State of a stage.
+
+        - `pending`: not started yet (or never reached, when an earlier stage ended the run)
+        - `running`: its child job is running
+        - `succeeded`: finished, in this run or earlier (`reused`); never re-run or re-charged
+        - `failed`: its child job failed and was refunded by that type's rule, or something else kept it from starting, uncharged and with no child job (another run of the project, no face in the video); see `error`
+        - `skipped`: not started, uncharged, because it could not be paid or exceeded a cap (the run's or the key's), or, for on-screen, a plan change during the run trimmed its lip-sync source; see `error`
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of MediaKind values known to this SDK version'
+  update:
+    MediaKindKnown:
+      type: string
+      description: Values of MediaKind known to this SDK version.
+      enum:
+      - video
+      - audio
+- target: $.components.schemas.MediaKind
+  description: 'SDK-1: MediaKind becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: MediaKind = anyOf [MediaKindKnown, string]'
+  update:
+    MediaKind:
+      anyOf:
+      - $ref: '#/components/schemas/MediaKindKnown'
+      - type: string
+      description: |-
+        Media kind.
+
+        - `video`: video with audio
+        - `audio`: audio only
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of MediaPurpose values known to this SDK version'
+  update:
+    MediaPurposeKnown:
+      type: string
+      description: Values of MediaPurpose known to this SDK version.
+      enum:
+      - project_source
+      - voice_sample
+- target: $.components.schemas.MediaPurpose
+  description: 'SDK-1: MediaPurpose becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: MediaPurpose = anyOf [MediaPurposeKnown, string]'
+  update:
+    MediaPurpose:
+      anyOf:
+      - $ref: '#/components/schemas/MediaPurposeKnown'
+      - type: string
+      description: |-
+        What a media item is for.
+
+        - `project_source`: the source of a project (default)
+        - `voice_sample`: a sample for createVoiceClone (audio, or video whose audio is extracted to MP3 on import)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of MediaSourceProvider values known to this SDK version'
+  update:
+    MediaSourceProviderKnown:
+      type: string
+      description: Values of MediaSourceProvider known to this SDK version.
+      enum:
+      - youtube
+      - google_drive
+      - vimeo
+      - direct
+- target: $.components.schemas.MediaSourceProvider
+  description: 'SDK-1: MediaSourceProvider becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: MediaSourceProvider = anyOf [MediaSourceProviderKnown, string]'
+  update:
+    MediaSourceProvider:
+      anyOf:
+      - $ref: '#/components/schemas/MediaSourceProviderKnown'
+      - type: string
+      description: |-
+        URL import provider.
+
+        - `youtube`: YouTube
+        - `google_drive`: Google Drive
+        - `vimeo`: Vimeo
+        - `direct`: any other public URL
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of MediaSourceType values known to this SDK version'
+  update:
+    MediaSourceTypeKnown:
+      type: string
+      description: Values of MediaSourceType known to this SDK version.
+      enum:
+      - upload
+      - url
+- target: $.components.schemas.MediaSourceType
+  description: 'SDK-1: MediaSourceType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: MediaSourceType = anyOf [MediaSourceTypeKnown, string]'
+  update:
+    MediaSourceType:
+      anyOf:
+      - $ref: '#/components/schemas/MediaSourceTypeKnown'
+      - type: string
+      description: |-
+        Media origin.
+
+        - `upload`: uploaded through createUpload
+        - `url`: imported from a URL
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of MediaStatus values known to this SDK version'
+  update:
+    MediaStatusKnown:
+      type: string
+      description: Values of MediaStatus known to this SDK version.
+      enum:
+      - ready
+- target: $.components.schemas.MediaStatus
+  description: 'SDK-1: MediaStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: MediaStatus = anyOf [MediaStatusKnown, string]'
+  update:
+    MediaStatus:
+      anyOf:
+      - $ref: '#/components/schemas/MediaStatusKnown'
+      - type: string
+      description: |-
+        Media status. An item exists once its `media_import` job has succeeded.
+
+        - `ready`: usable
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of MinuteCreditType values known to this SDK version'
+  update:
+    MinuteCreditTypeKnown:
+      type: string
+      description: Values of MinuteCreditType known to this SDK version.
+      enum:
+      - minutes
+      - lipsync_free_minutes
+- target: $.components.schemas.MinuteCreditType
+  description: 'SDK-1: MinuteCreditType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: MinuteCreditType = anyOf [MinuteCreditTypeKnown, string]'
+  update:
+    MinuteCreditType:
+      anyOf:
+      - $ref: '#/components/schemas/MinuteCreditTypeKnown'
+      - type: string
+      description: |-
+        A minute-denominated credit pool.
+
+        - `minutes`: the main minute pool
+        - `lipsync_free_minutes`: free lip-sync minutes
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of NextDubMode values known to this SDK version'
+  update:
+    NextDubModeKnown:
+      type: string
+      description: Values of NextDubMode known to this SDK version.
+      enum:
+      - changed_segments
+      - full
+- target: $.components.schemas.NextDubMode
+  description: 'SDK-1: NextDubMode becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: NextDubMode = anyOf [NextDubModeKnown, string]'
+  update:
+    NextDubMode:
+      anyOf:
+      - $ref: '#/components/schemas/NextDubModeKnown'
+      - type: string
+      description: |-
+        Mode the next auto dub will apply.
+
+        - `changed_segments`: the next auto dub voices changed segments
+        - `full`: the next auto dub re-voices everything
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of OnscreenAutoStartState values known to this SDK version'
+  update:
+    OnscreenAutoStartStateKnown:
+      type: string
+      description: Values of OnscreenAutoStartState known to this SDK version.
+      enum:
+      - not_requested
+      - pending
+      - started
+      - rejected
+- target: $.components.schemas.OnscreenAutoStartState
+  description: 'SDK-1: OnscreenAutoStartState becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: OnscreenAutoStartState = anyOf [OnscreenAutoStartStateKnown, string]'
+  update:
+    OnscreenAutoStartState:
+      anyOf:
+      - $ref: '#/components/schemas/OnscreenAutoStartStateKnown'
+      - type: string
+      description: |-
+        On-screen auto-start state.
+
+        - `not_requested`: not requested
+        - `pending`: waits for the first dub
+        - `started`: the onscreen job was created
+        - `rejected`: refused; see rejection_code
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of OnscreenSourceKind values known to this SDK version'
+  update:
+    OnscreenSourceKindKnown:
+      type: string
+      description: Values of OnscreenSourceKind known to this SDK version.
+      enum:
+      - dubbed
+      - lipsync
+- target: $.components.schemas.OnscreenSourceKind
+  description: 'SDK-1: OnscreenSourceKind becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: OnscreenSourceKind = anyOf [OnscreenSourceKindKnown, string]'
+  update:
+    OnscreenSourceKind:
+      anyOf:
+      - $ref: '#/components/schemas/OnscreenSourceKindKnown'
+      - type: string
+      description: |-
+        Which video an on-screen job renders over.
+
+        - `dubbed`: the dubbed video
+        - `lipsync`: the current lip-synced video, when a localization run orders lip-sync and on-screen
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of OutputKind values known to this SDK version'
+  update:
+    OutputKindKnown:
+      type: string
+      description: Values of OutputKind known to this SDK version.
+      enum:
+      - source
+      - cover_image
+      - dubbed_video
+      - dubbed_audio
+      - voice_track
+      - dubbed_subtitles
+      - source_subtitles
+      - source_subtitles_speakers
+      - target_subtitles
+      - target_subtitles_speakers
+      - burned_subtitles_video
+      - lipsync_video
+      - lipsync_burned_subtitles_video
+      - onscreen_video
+      - localized_video
+- target: $.components.schemas.OutputKind
+  description: 'SDK-1: OutputKind becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: OutputKind = anyOf [OutputKindKnown, string]'
+  update:
+    OutputKind:
+      anyOf:
+      - $ref: '#/components/schemas/OutputKindKnown'
+      - type: string
+      description: |-
+        Kind of a downloadable output.
+
+        - `source`: the original media
+        - `cover_image`: the cover frame
+        - `dubbed_video`: the dubbed video
+        - `dubbed_audio`: dubbed audio with background
+        - `voice_track`: the voice-only track
+        - `dubbed_subtitles`: subtitles snapshot at the last dub (srt, vtt)
+        - `source_subtitles`: source subtitles rendered from the current transcript, one cue per segment
+        - `source_subtitles_speakers`: the same with `[SPEAKER_NN]:` labels
+        - `target_subtitles`: target subtitles rendered from the current transcript, one cue per segment
+        - `target_subtitles_speakers`: the same with `[SPEAKER_NN]:` labels
+        - `burned_subtitles_video`: the dubbed video with burned-in subtitles
+        - `lipsync_video`: the lip-synced video
+        - `lipsync_burned_subtitles_video`: the lip-synced video with burned-in subtitles
+        - `onscreen_video`: the video with translated on-screen text
+        - `localized_video`: the final video of a localization run, holding every ordered change
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of OutputUnavailableReason values known to this SDK version'
+  update:
+    OutputUnavailableReasonKnown:
+      type: string
+      description: Values of OutputUnavailableReason known to this SDK version.
+      enum:
+      - not_produced
+      - in_progress
+      - not_in_plan
+      - dub_payment_required
+      - not_generated
+      - restoring
+      - temporarily_unavailable
+- target: $.components.schemas.OutputUnavailableReason
+  description: 'SDK-1: OutputUnavailableReason becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: OutputUnavailableReason = anyOf [OutputUnavailableReasonKnown, string]'
+  update:
+    OutputUnavailableReason:
+      anyOf:
+      - $ref: '#/components/schemas/OutputUnavailableReasonKnown'
+      - type: string
+      description: |-
+        Why an output has no URL.
+
+        - `not_produced`: not produced yet, or (`lipsync_video`) cleared by a later dub
+        - `in_progress`: being produced
+        - `not_in_plan`: the plan does not allow the download
+        - `dub_payment_required`: subtitles of a project created through v3: closed until a dub of that project is charged (createDub)
+        - `not_generated`: never requested for this project
+        - `restoring`: archived; restoring (createFileRestore)
+        - `temporarily_unavailable`: a dependency failed; retry
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of PlanFamily values known to this SDK version'
+  update:
+    PlanFamilyKnown:
+      type: string
+      description: Values of PlanFamily known to this SDK version.
+      enum:
+      - trial
+      - free
+      - creator
+      - creator_pro
+      - business
+      - enterprise
+      - custom
+- target: $.components.schemas.PlanFamily
+  description: 'SDK-1: PlanFamily becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: PlanFamily = anyOf [PlanFamilyKnown, string]'
+  update:
+    PlanFamily:
+      anyOf:
+      - $ref: '#/components/schemas/PlanFamilyKnown'
+      - type: string
+      description: |-
+        Plan family of the payer. Open enum: new values may be added.
+
+        - `trial`: no subscription; trial processing window
+        - `free`: free subscription
+        - `creator`: Creator plans
+        - `creator_pro`: Creator Pro plans
+        - `business`: Business plans
+        - `enterprise`: Enterprise plans
+        - `custom`: any other plan
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of PricingRule values known to this SDK version'
+  update:
+    PricingRuleKnown:
+      type: string
+      description: Values of PricingRule known to this SDK version.
+      enum:
+      - full
+      - changed_speech
+      - selected_speech
+      - free_language
+- target: $.components.schemas.PricingRule
+  description: 'SDK-1: PricingRule becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: PricingRule = anyOf [PricingRuleKnown, string]'
+  update:
+    PricingRule:
+      anyOf:
+      - $ref: '#/components/schemas/PricingRuleKnown'
+      - type: string
+      description: |-
+        How a dub or segment generation is priced: `max(1, round(s/60))` minutes (half to even) over the speech seconds `s` below; a free dubbing variant costs 0. Speech seconds read each segment's interval, so `createDub`, `generateSegments` and a run's dub answer 422 `validation_failed` (`errors[].code: text_too_long_for_interval`) on a translation above 60 characters per second of its interval, or 100 on any interval. When every line passes, all one request voices may hold at most 3600 characters for each minute its speech is priced at, the list price also for a free dubbing variant: above that it answers 422 `validation_failed` (`errors[].code: text_too_long_for_price`, pointer `/segment_ids` or `/segments`).
+
+        - `full`: speech seconds of every segment (auto-dub: the processed media duration)
+        - `changed_speech`: speech seconds of the voiced segments, with no cap at the full price
+        - `selected_speech`: speech seconds of the chosen segments (segment generation)
+        - `free_language`: free dubbing variant
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProblemRecommendation values known to this SDK version'
+  update:
+    ProblemRecommendationKnown:
+      type: string
+      description: Values of ProblemRecommendation known to this SDK version.
+      enum:
+      - fix_request
+      - wait
+      - top_up
+      - retry_later
+      - contact_support
+- target: $.components.schemas.ProblemRecommendation
+  description: 'SDK-1: ProblemRecommendation becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProblemRecommendation = anyOf [ProblemRecommendationKnown, string]'
+  update:
+    ProblemRecommendation:
+      anyOf:
+      - $ref: '#/components/schemas/ProblemRecommendationKnown'
+      - type: string
+      description: |-
+        What to do about a problem, set per code. `retry` says how to resend; this says what has to happen first.
+
+        - `fix_request`: change the request or its inputs; sent unchanged it fails again
+        - `wait`: work in progress blocks the request; wait for it to end, then retry
+        - `top_up`: the workspace owner adds minutes or changes the plan in the web app
+        - `retry_later`: a temporary failure; retry after a pause (after `Retry-After` when given)
+        - `contact_support`: Rask has to act; contact support with the `instance` value
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProblemRetry values known to this SDK version'
+  update:
+    ProblemRetryKnown:
+      type: string
+      description: Values of ProblemRetry known to this SDK version.
+      enum:
+      - same_key
+      - new_key
+      - none
+- target: $.components.schemas.ProblemRetry
+  description: 'SDK-1: ProblemRetry becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProblemRetry = anyOf [ProblemRetryKnown, string]'
+  update:
+    ProblemRetry:
+      anyOf:
+      - $ref: '#/components/schemas/ProblemRetryKnown'
+      - type: string
+      description: |-
+        How to retry after a problem.
+
+        - `same_key`: resend the same request with the same Idempotency-Key (after `Retry-After` when given)
+        - `new_key`: start again with a new Idempotency-Key (a failed job)
+        - `none`: do not retry the request unchanged
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProcessingFailureCode values known to this SDK version'
+  update:
+    ProcessingFailureCodeKnown:
+      type: string
+      description: Values of ProcessingFailureCode known to this SDK version.
+      enum:
+      - media_processing_failed
+      - source_unavailable
+      - no_audio_track
+      - transcription_failed
+      - no_speech_detected
+      - audio_separation_failed
+      - speaker_detection_failed
+      - translation_failed
+      - voiceover_failed
+      - merge_failed
+      - internal_error
+- target: $.components.schemas.ProcessingFailureCode
+  description: 'SDK-1: ProcessingFailureCode becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProcessingFailureCode = anyOf [ProcessingFailureCodeKnown, string]'
+  update:
+    ProcessingFailureCode:
+      anyOf:
+      - $ref: '#/components/schemas/ProcessingFailureCodeKnown'
+      - type: string
+      description: |-
+        Project processing failure code.
+
+        - `media_processing_failed`: the media could not be processed
+        - `source_unavailable`: the source link was not accessible
+        - `no_audio_track`: the media has no audio
+        - `transcription_failed`: speech recognition failed
+        - `no_speech_detected`: no speech was found
+        - `audio_separation_failed`: voice/background separation failed
+        - `speaker_detection_failed`: speaker detection failed
+        - `translation_failed`: translation failed
+        - `voiceover_failed`: the last dub failed (recoverable: dub again)
+        - `merge_failed`: rendering the last dub failed (recoverable: dub again)
+        - `internal_error`: an internal error
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProcessingPhase values known to this SDK version'
+  update:
+    ProcessingPhaseKnown:
+      type: string
+      description: Values of ProcessingPhase known to this SDK version.
+      enum:
+      - processing
+      - awaiting_user
+      - done
+      - failed
+- target: $.components.schemas.ProcessingPhase
+  description: 'SDK-1: ProcessingPhase becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProcessingPhase = anyOf [ProcessingPhaseKnown, string]'
+  update:
+    ProcessingPhase:
+      anyOf:
+      - $ref: '#/components/schemas/ProcessingPhaseKnown'
+      - type: string
+      description: |-
+        Project processing phase.
+
+        - `processing`: the pipeline is running
+        - `awaiting_user`: waiting for the user (e.g. imported target subtitles need a dub)
+        - `done`: nothing runs; review, edit or dub
+        - `failed`: processing failed; see failure
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProjectProcessingTrigger values known to this SDK version'
+  update:
+    ProjectProcessingTriggerKnown:
+      type: string
+      description: Values of ProjectProcessingTrigger known to this SDK version.
+      enum:
+      - create
+      - copy
+      - subtitle_import
+- target: $.components.schemas.ProjectProcessingTrigger
+  description: 'SDK-1: ProjectProcessingTrigger becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProjectProcessingTrigger = anyOf [ProjectProcessingTriggerKnown, string]'
+  update:
+    ProjectProcessingTrigger:
+      anyOf:
+      - $ref: '#/components/schemas/ProjectProcessingTriggerKnown'
+      - type: string
+      description: |-
+        What started a project_processing run.
+
+        - `create`: createProject or a web upload
+        - `copy`: createProjectCopies or a web copy
+        - `subtitle_import`: importTranscript
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProjectSourceType values known to this SDK version'
+  update:
+    ProjectSourceTypeKnown:
+      type: string
+      description: Values of ProjectSourceType known to this SDK version.
+      enum:
+      - file
+      - url
+      - youtube
+      - google_drive
+      - vimeo
+- target: $.components.schemas.ProjectSourceType
+  description: 'SDK-1: ProjectSourceType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProjectSourceType = anyOf [ProjectSourceTypeKnown, string]'
+  update:
+    ProjectSourceType:
+      anyOf:
+      - $ref: '#/components/schemas/ProjectSourceTypeKnown'
+      - type: string
+      description: |-
+        Where a project's media came from.
+
+        - `file`: an uploaded file
+        - `url`: a direct URL
+        - `youtube`: YouTube
+        - `google_drive`: Google Drive
+        - `vimeo`: Vimeo
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of ProjectStage values known to this SDK version'
+  update:
+    ProjectStageKnown:
+      type: string
+      description: Values of ProjectStage known to this SDK version.
+      enum:
+      - queued
+      - uploading
+      - transcribing
+      - separating_audio
+      - detecting_speakers
+      - matching_voices
+      - translating
+      - voicing
+      - merging
+- target: $.components.schemas.ProjectStage
+  description: 'SDK-1: ProjectStage becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: ProjectStage = anyOf [ProjectStageKnown, string]'
+  update:
+    ProjectStage:
+      anyOf:
+      - $ref: '#/components/schemas/ProjectStageKnown'
+      - type: string
+      description: |-
+        Pipeline stage of a project.
+
+        - `queued`: queued
+        - `uploading`: copying the media
+        - `transcribing`: speech recognition
+        - `separating_audio`: separating voice and background
+        - `detecting_speakers`: speaker detection
+        - `matching_voices`: matching voices to speakers
+        - `translating`: translating
+        - `voicing`: generating speech
+        - `merging`: rendering the dubbed video
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of Scope values known to this SDK version'
+  update:
+    ScopeKnown:
+      type: string
+      description: Values of Scope known to this SDK version.
+      enum:
+      - account:read
+      - media:read
+      - media:write
+      - projects:read
+      - projects:write
+      - transcripts:read
+      - transcripts:write
+      - voices:read
+      - voices:write
+      - glossaries:read
+      - glossaries:write
+      - dubbing:write
+      - lipsync:write
+      - onscreen:write
+      - jobs:read
+      - jobs:write
+      - webhooks:read
+      - webhooks:write
+      - credits:spend
+- target: $.components.schemas.Scope
+  description: 'SDK-1: Scope becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: Scope = anyOf [ScopeKnown, string]'
+  update:
+    Scope:
+      anyOf:
+      - $ref: '#/components/schemas/ScopeKnown'
+      - type: string
+      description: |-
+        An API key scope (`resource:action`). `X:write` implies `X:read`; every `*:write` implies `jobs:read`.
+        A key reads every job it started. Another credential's job also needs the scope that reads what it works on, as its params and result hold that: `media:read` for `media_import`, `voices:read` for `voice_clone`, `transcripts:read` for `translation` and `segment_generation`, `projects:read` for the rest. Otherwise it answers 404 `job_not_found` and is not listed.
+
+        - `account:read`: read me, plan, entitlements, balance and usage
+        - `media:read`: read uploads and media
+        - `media:write`: create and complete uploads, import from a URL, delete media (implies media:read)
+        - `projects:read`: read projects, outputs, subtitles, lip-sync and on-screen state
+        - `projects:write`: create, copy, update and delete projects; folders; share links; exports; file restores
+        - `transcripts:read`: read transcripts, segments, versions and translation settings
+        - `transcripts:write`: edit, split, merge and retranslate segments, import subtitles, save and restore versions, change translation settings
+        - `voices:read`: read speakers, the voice catalog and voice clones
+        - `voices:write`: change a speaker's voice; create, update and delete voice clones
+        - `glossaries:read`: read glossaries
+        - `glossaries:write`: create, update and delete glossaries
+        - `dubbing:write`: dub and redub, segment generation, localization runs and their estimates
+        - `lipsync:write`: lip-sync (face check included) and its estimate
+        - `onscreen:write`: on-screen text translation and its estimate
+        - `jobs:read`: get, list and wait for jobs
+        - `jobs:write`: cancel and resume jobs
+        - `webhooks:read`: read webhook endpoints and deliveries
+        - `webhooks:write`: create, update, delete, rotate and test webhook endpoints
+        - `credits:spend`: additionally required by every operation that can spend credits
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SegmentClipFit values known to this SDK version'
+  update:
+    SegmentClipFitKnown:
+      type: string
+      description: Values of SegmentClipFit known to this SDK version.
+      enum:
+      - fits
+      - overruns
+- target: $.components.schemas.SegmentClipFit
+  description: 'SDK-1: SegmentClipFit becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SegmentClipFit = anyOf [SegmentClipFitKnown, string]'
+  update:
+    SegmentClipFit:
+      anyOf:
+      - $ref: '#/components/schemas/SegmentClipFitKnown'
+      - type: string
+      description: |-
+        How a clip fits its segment interval.
+
+        - `fits`: the clip is no longer than the interval
+        - `overruns`: the clip is longer than the interval by `overrun_seconds`
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SegmentStatus values known to this SDK version'
+  update:
+    SegmentStatusKnown:
+      type: string
+      description: Values of SegmentStatus known to this SDK version.
+      enum:
+      - ready
+      - translating
+      - voicing
+      - translation_failed
+- target: $.components.schemas.SegmentStatus
+  description: 'SDK-1: SegmentStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SegmentStatus = anyOf [SegmentStatusKnown, string]'
+  update:
+    SegmentStatus:
+      anyOf:
+      - $ref: '#/components/schemas/SegmentStatusKnown'
+      - type: string
+      description: |-
+        Segment processing status.
+
+        - `ready`: editable
+        - `translating`: a translation is running
+        - `voicing`: a segment generation is voicing it
+        - `translation_failed`: the last translation failed
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SpeakerVoiceOrigin values known to this SDK version'
+  update:
+    SpeakerVoiceOriginKnown:
+      type: string
+      description: Values of SpeakerVoiceOrigin known to this SDK version.
+      enum:
+      - requested
+      - suggested
+      - assigned
+- target: $.components.schemas.SpeakerVoiceOrigin
+  description: 'SDK-1: SpeakerVoiceOrigin becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SpeakerVoiceOrigin = anyOf [SpeakerVoiceOriginKnown, string]'
+  update:
+    SpeakerVoiceOrigin:
+      anyOf:
+      - $ref: '#/components/schemas/SpeakerVoiceOriginKnown'
+      - type: string
+      description: |-
+        Where a speaker's voice came from.
+
+        - `requested`: named in `speaker_voices` when the project was created
+        - `suggested`: chosen by voice matching
+        - `assigned`: changed after that (updateSpeakerVoice or the web app)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SubscriptionStatus values known to this SDK version'
+  update:
+    SubscriptionStatusKnown:
+      type: string
+      description: Values of SubscriptionStatus known to this SDK version.
+      enum:
+      - active
+      - trialing
+      - incomplete
+      - past_due
+      - unpaid
+      - paused
+      - canceled
+      - incomplete_expired
+- target: $.components.schemas.SubscriptionStatus
+  description: 'SDK-1: SubscriptionStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SubscriptionStatus = anyOf [SubscriptionStatusKnown, string]'
+  update:
+    SubscriptionStatus:
+      anyOf:
+      - $ref: '#/components/schemas/SubscriptionStatusKnown'
+      - type: string
+      description: |-
+        Subscription status. Open enum.
+
+        - `active`: active
+        - `trialing`: in a trial period
+        - `incomplete`: first payment pending
+        - `past_due`: payment failed, retrying
+        - `unpaid`: payment failed, retries exhausted
+        - `paused`: collection paused
+        - `canceled`: canceled
+        - `incomplete_expired`: first payment never completed
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SubtitleCue values known to this SDK version'
+  update:
+    SubtitleCueKnown:
+      type: string
+      description: Values of SubtitleCue known to this SDK version.
+      enum:
+      - segment
+      - line
+- target: $.components.schemas.SubtitleCue
+  description: 'SDK-1: SubtitleCue becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SubtitleCue = anyOf [SubtitleCueKnown, string]'
+  update:
+    SubtitleCue:
+      anyOf:
+      - $ref: '#/components/schemas/SubtitleCueKnown'
+      - type: string
+      description: |-
+        How cues are cut.
+
+        - `segment`: one cue per segment, text as stored
+        - `line`: long segments split into timed lines, as in the `dubbed_subtitles` snapshot
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SubtitleFormat values known to this SDK version'
+  update:
+    SubtitleFormatKnown:
+      type: string
+      description: Values of SubtitleFormat known to this SDK version.
+      enum:
+      - srt
+      - vtt
+- target: $.components.schemas.SubtitleFormat
+  description: 'SDK-1: SubtitleFormat becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SubtitleFormat = anyOf [SubtitleFormatKnown, string]'
+  update:
+    SubtitleFormat:
+      anyOf:
+      - $ref: '#/components/schemas/SubtitleFormatKnown'
+      - type: string
+      description: |-
+        Subtitle format.
+
+        - `srt`: SubRip
+        - `vtt`: WebVTT
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of SubtitleLanguageRole values known to this SDK version'
+  update:
+    SubtitleLanguageRoleKnown:
+      type: string
+      description: Values of SubtitleLanguageRole known to this SDK version.
+      enum:
+      - source
+      - target
+- target: $.components.schemas.SubtitleLanguageRole
+  description: 'SDK-1: SubtitleLanguageRole becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: SubtitleLanguageRole = anyOf [SubtitleLanguageRoleKnown, string]'
+  update:
+    SubtitleLanguageRole:
+      anyOf:
+      - $ref: '#/components/schemas/SubtitleLanguageRoleKnown'
+      - type: string
+      description: |-
+        Subtitle side.
+
+        - `source`: the source language
+        - `target`: the target language
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of TextAdaptation values known to this SDK version'
+  update:
+    TextAdaptationKnown:
+      type: string
+      description: Values of TextAdaptation known to this SDK version.
+      enum:
+      - context
+      - as_written
+- target: $.components.schemas.TextAdaptation
+  description: 'SDK-1: TextAdaptation becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: TextAdaptation = anyOf [TextAdaptationKnown, string]'
+  update:
+    TextAdaptation:
+      anyOf:
+      - $ref: '#/components/schemas/TextAdaptationKnown'
+      - type: string
+      description: |-
+        How the dub treats the translated text.
+
+        - `context`: voiced with the translation context, so the speech may be adapted to the interval (auto-dub after a meaning-first translation)
+        - `as_written`: voiced exactly as the segment text is written (every manual dub, segment generation and auto-dub without a translation context)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of TokenAudience values known to this SDK version'
+  update:
+    TokenAudienceKnown:
+      type: string
+      description: Values of TokenAudience known to this SDK version.
+      enum:
+      - v3
+      - mcp
+- target: $.components.schemas.TokenAudience
+  description: 'SDK-1: TokenAudience becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: TokenAudience = anyOf [TokenAudienceKnown, string]'
+  update:
+    TokenAudience:
+      anyOf:
+      - $ref: '#/components/schemas/TokenAudienceKnown'
+      - type: string
+      description: |-
+        Audience the credential was authenticated for.
+
+        - `v3`: direct REST calls
+        - `mcp`: calls relayed by the Rask MCP server
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of TranslationJobCause values known to this SDK version'
+  update:
+    TranslationJobCauseKnown:
+      type: string
+      description: Values of TranslationJobCause known to this SDK version.
+      enum:
+      - retranslation
+      - edit
+- target: $.components.schemas.TranslationJobCause
+  description: 'SDK-1: TranslationJobCause becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: TranslationJobCause = anyOf [TranslationJobCauseKnown, string]'
+  update:
+    TranslationJobCause:
+      anyOf:
+      - $ref: '#/components/schemas/TranslationJobCauseKnown'
+      - type: string
+      description: |-
+        What started a translation job.
+
+        - `retranslation`: retranslateSegments
+        - `edit`: an edit that retranslates segments
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of UploadContentType values known to this SDK version'
+  update:
+    UploadContentTypeKnown:
+      type: string
+      description: Values of UploadContentType known to this SDK version.
+      enum:
+      - video/mp4
+      - video/quicktime
+      - video/x-matroska
+      - video/webm
+      - video/x-msvideo
+      - video/x-m4v
+      - video/3gpp
+      - audio/mpeg
+      - audio/wav
+      - audio/x-wav
+      - audio/flac
+      - audio/x-flac
+      - audio/mp4
+      - audio/x-m4a
+- target: $.components.schemas.UploadContentType
+  description: 'SDK-1: UploadContentType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: UploadContentType = anyOf [UploadContentTypeKnown, string]'
+  update:
+    UploadContentType:
+      anyOf:
+      - $ref: '#/components/schemas/UploadContentTypeKnown'
+      - type: string
+      description: |-
+        Accepted upload content types. `voice_sample` uploads accept audio (<= 11 MB, kept as uploaded) and video (<= 500 MB; its audio is extracted to MP3 on import).
+
+        - `video/mp4`: accepted
+        - `video/quicktime`: accepted
+        - `video/x-matroska`: accepted
+        - `video/webm`: accepted
+        - `video/x-msvideo`: accepted
+        - `video/x-m4v`: accepted
+        - `video/3gpp`: accepted
+        - `audio/mpeg`: accepted
+        - `audio/wav`: accepted
+        - `audio/x-wav`: accepted
+        - `audio/flac`: accepted
+        - `audio/x-flac`: accepted
+        - `audio/mp4`: accepted
+        - `audio/x-m4a`: accepted
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of UploadStatus values known to this SDK version'
+  update:
+    UploadStatusKnown:
+      type: string
+      description: Values of UploadStatus known to this SDK version.
+      enum:
+      - pending
+      - completing
+      - completed
+      - aborted
+      - expired
+- target: $.components.schemas.UploadStatus
+  description: 'SDK-1: UploadStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: UploadStatus = anyOf [UploadStatusKnown, string]'
+  update:
+    UploadStatus:
+      anyOf:
+      - $ref: '#/components/schemas/UploadStatusKnown'
+      - type: string
+      description: |-
+        Upload status.
+
+        - `pending`: waiting for bytes; transfer URLs are valid
+        - `completing`: completeUpload is running
+        - `completed`: registered as media
+        - `aborted`: deleted before completion
+        - `expired`: not completed within 24 hours
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of UsageChannel values known to this SDK version'
+  update:
+    UsageChannelKnown:
+      type: string
+      description: Values of UsageChannel known to this SDK version.
+      enum:
+      - web
+      - api
+      - mcp
+      - api_v2
+      - system
+      - unknown
+- target: $.components.schemas.UsageChannel
+  description: 'SDK-1: UsageChannel becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: UsageChannel = anyOf [UsageChannelKnown, string]'
+  update:
+    UsageChannel:
+      anyOf:
+      - $ref: '#/components/schemas/UsageChannelKnown'
+      - type: string
+      description: |-
+        Where a charge came from.
+
+        - `web`: the Rask web app (later; until then `unknown`)
+        - `api`: REST API v3
+        - `mcp`: the Rask MCP server
+        - `api_v2`: the legacy API v2 (later; until then `unknown`)
+        - `system`: automatic work (auto-dub, on-screen auto-start)
+        - `unknown`: no v3 job is linked to the charge (web, API v2 and charges made before v3)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of UsageFeature values known to this SDK version'
+  update:
+    UsageFeatureKnown:
+      type: string
+      description: Values of UsageFeature known to this SDK version.
+      enum:
+      - project_creation
+      - project_copy
+      - dub
+      - redub
+      - segment_generation
+      - lipsync_legacy
+      - lipsync_enhanced
+      - lipsync_free
+      - onscreen
+      - other
+      - lipsync_unknown_model
+- target: $.components.schemas.UsageFeature
+  description: 'SDK-1: UsageFeature becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: UsageFeature = anyOf [UsageFeatureKnown, string]'
+  update:
+    UsageFeature:
+      anyOf:
+      - $ref: '#/components/schemas/UsageFeatureKnown'
+      - type: string
+      description: |-
+        Usage vocabulary for charges, cost lines and usage reports.
+
+        - `project_creation`: creating a project (project credit)
+        - `project_copy`: copying a project (project credit)
+        - `dub`: a full dub
+        - `redub`: a dub of changed segments
+        - `segment_generation`: paid voicing of chosen segments
+        - `lipsync_legacy`: a Legacy lip-sync run
+        - `lipsync_enhanced`: an Enhanced lip-sync run
+        - `lipsync_free`: the free lip-sync run
+        - `onscreen`: on-screen text translation
+        - `other`: anything else (admin adjustments, other products)
+        - `lipsync_unknown_model`: a lip-sync run not started through v3 (its model is not recorded)
+
+        A charge without a v3 job reports the feature of what it paid for: `project_creation`, `project_copy`, `dub`, `redub`, `onscreen`, `lipsync_unknown_model` or `lipsync_free` (by pool), else `other`. Refunds follow their charge.
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of UsageTrigger values known to this SDK version'
+  update:
+    UsageTriggerKnown:
+      type: string
+      description: Values of UsageTrigger known to this SDK version.
+      enum:
+      - manual
+      - auto
+- target: $.components.schemas.UsageTrigger
+  description: 'SDK-1: UsageTrigger becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: UsageTrigger = anyOf [UsageTriggerKnown, string]'
+  update:
+    UsageTrigger:
+      anyOf:
+      - $ref: '#/components/schemas/UsageTriggerKnown'
+      - type: string
+      description: |-
+        Whether a charge was started manually or automatically.
+
+        - `manual`: started by a request
+        - `auto`: started automatically
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VersionAuthorType values known to this SDK version'
+  update:
+    VersionAuthorTypeKnown:
+      type: string
+      description: Values of VersionAuthorType known to this SDK version.
+      enum:
+      - user
+      - system
+- target: $.components.schemas.VersionAuthorType
+  description: 'SDK-1: VersionAuthorType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VersionAuthorType = anyOf [VersionAuthorTypeKnown, string]'
+  update:
+    VersionAuthorType:
+      anyOf:
+      - $ref: '#/components/schemas/VersionAuthorTypeKnown'
+      - type: string
+      description: |-
+        Version author type.
+
+        - `user`: a user
+        - `system`: Rask
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VersionTrigger values known to this SDK version'
+  update:
+    VersionTriggerKnown:
+      type: string
+      description: Values of VersionTrigger known to this SDK version.
+      enum:
+      - manual
+      - autosave
+      - restore_point
+      - translation_completed
+      - dub_completed
+- target: $.components.schemas.VersionTrigger
+  description: 'SDK-1: VersionTrigger becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VersionTrigger = anyOf [VersionTriggerKnown, string]'
+  update:
+    VersionTrigger:
+      anyOf:
+      - $ref: '#/components/schemas/VersionTriggerKnown'
+      - type: string
+      description: |-
+        Why a transcript version was saved.
+
+        - `manual`: saved by a user (never pruned)
+        - `autosave`: saved by the web editor
+        - `restore_point`: saved before a risky change, by v3 operations ("Before <operation>") or with createTranscriptVersion `trigger: restore_point`; at most one per transcript per 60 s or per Idempotency-Key family
+        - `translation_completed`: after a translation
+        - `dub_completed`: after a dub
+
+        Versions other than `manual` beyond 50 per transcript are pruned oldest first, except the newest `translation_completed` and `dub_completed` versions.
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VoiceCloneSamplesStatus values known to this SDK version'
+  update:
+    VoiceCloneSamplesStatusKnown:
+      type: string
+      description: Values of VoiceCloneSamplesStatus known to this SDK version.
+      enum:
+      - ready
+      - regenerating
+      - stale
+- target: $.components.schemas.VoiceCloneSamplesStatus
+  description: 'SDK-1: VoiceCloneSamplesStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VoiceCloneSamplesStatus = anyOf [VoiceCloneSamplesStatusKnown, string]'
+  update:
+    VoiceCloneSamplesStatus:
+      anyOf:
+      - $ref: '#/components/schemas/VoiceCloneSamplesStatusKnown'
+      - type: string
+      description: |-
+        Sample status.
+
+        - `ready`: samples match the settings
+        - `regenerating`: being regenerated
+        - `stale`: regeneration failed; settings still apply
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VoiceCloneSourceType values known to this SDK version'
+  update:
+    VoiceCloneSourceTypeKnown:
+      type: string
+      description: Values of VoiceCloneSourceType known to this SDK version.
+      enum:
+      - media
+      - project_speaker
+- target: $.components.schemas.VoiceCloneSourceType
+  description: 'SDK-1: VoiceCloneSourceType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VoiceCloneSourceType = anyOf [VoiceCloneSourceTypeKnown, string]'
+  update:
+    VoiceCloneSourceType:
+      anyOf:
+      - $ref: '#/components/schemas/VoiceCloneSourceTypeKnown'
+      - type: string
+      description: |-
+        Voice clone source type.
+
+        - `media`: voice samples (media with purpose voice_sample)
+        - `project_speaker`: a speaker of a project
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VoiceCloneStatus values known to this SDK version'
+  update:
+    VoiceCloneStatusKnown:
+      type: string
+      description: Values of VoiceCloneStatus known to this SDK version.
+      enum:
+      - processing
+      - ready
+      - failed
+- target: $.components.schemas.VoiceCloneStatus
+  description: 'SDK-1: VoiceCloneStatus becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VoiceCloneStatus = anyOf [VoiceCloneStatusKnown, string]'
+  update:
+    VoiceCloneStatus:
+      anyOf:
+      - $ref: '#/components/schemas/VoiceCloneStatusKnown'
+      - type: string
+      description: |-
+        Voice clone status.
+
+        - `processing`: being created
+        - `ready`: usable
+        - `failed`: see failure
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VoiceCloningAvailability values known to this SDK version'
+  update:
+    VoiceCloningAvailabilityKnown:
+      type: string
+      description: Values of VoiceCloningAvailability known to this SDK version.
+      enum:
+      - none
+      - beta
+      - available
+- target: $.components.schemas.VoiceCloningAvailability
+  description: 'SDK-1: VoiceCloningAvailability becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VoiceCloningAvailability = anyOf [VoiceCloningAvailabilityKnown, string]'
+  update:
+    VoiceCloningAvailability:
+      anyOf:
+      - $ref: '#/components/schemas/VoiceCloningAvailabilityKnown'
+      - type: string
+      description: |-
+        Voice cloning availability for a language.
+
+        - `none`: not available
+        - `beta`: available in beta
+        - `available`: available
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VoiceGender values known to this SDK version'
+  update:
+    VoiceGenderKnown:
+      type: string
+      description: Values of VoiceGender known to this SDK version.
+      enum:
+      - male
+      - female
+      - unspecified
+- target: $.components.schemas.VoiceGender
+  description: 'SDK-1: VoiceGender becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VoiceGender = anyOf [VoiceGenderKnown, string]'
+  update:
+    VoiceGender:
+      anyOf:
+      - $ref: '#/components/schemas/VoiceGenderKnown'
+      - type: string
+      description: |-
+        Voice gender.
+
+        - `male`: male
+        - `female`: female
+        - `unspecified`: unspecified
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of VoiceType values known to this SDK version'
+  update:
+    VoiceTypeKnown:
+      type: string
+      description: Values of VoiceType known to this SDK version.
+      enum:
+      - stock
+      - instant_clone
+      - library_clone
+      - rask_tts
+- target: $.components.schemas.VoiceType
+  description: 'SDK-1: VoiceType becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: VoiceType = anyOf [VoiceTypeKnown, string]'
+  update:
+    VoiceType:
+      anyOf:
+      - $ref: '#/components/schemas/VoiceTypeKnown'
+      - type: string
+      description: |-
+        Voice type.
+
+        - `stock`: a catalog voice
+        - `instant_clone`: the speaker's own voice cloned for this project
+        - `library_clone`: a workspace voice clone
+        - `rask_tts`: Rask TTS (free variants)
+      x-rask-open-enum: true
+- target: $.components.schemas
+  description: 'SDK-1: closed list of WorkspaceRole values known to this SDK version'
+  update:
+    WorkspaceRoleKnown:
+      type: string
+      description: Values of WorkspaceRole known to this SDK version.
+      enum:
+      - owner
+      - editor
+- target: $.components.schemas.WorkspaceRole
+  description: 'SDK-1: WorkspaceRole becomes open'
+  remove: true
+- target: $.components.schemas
+  description: 'SDK-1: WorkspaceRole = anyOf [WorkspaceRoleKnown, string]'
+  update:
+    WorkspaceRole:
+      anyOf:
+      - $ref: '#/components/schemas/WorkspaceRoleKnown'
+      - type: string
+      description: |-
+        Role of the acting user.
+
+        - `owner`: owns the workspace and pays for its work
+        - `editor`: a member who works in the workspace; the owner pays
+      x-rask-open-enum: true
+- target: $.components.schemas.BurnedSubtitlesExportInput.properties.source_video
+  description: 'Closed in requests: ExportSourceVideoKnown'
+  update:
+    $ref: '#/components/schemas/ExportSourceVideoKnown'
+- target: $.components.schemas.CreateDubRequest.properties.mode
+  description: 'Closed in requests: DubModeKnown'
+  update:
+    $ref: '#/components/schemas/DubModeKnown'
+- target: $.components.schemas.CreateLipsyncRequest.properties.model
+  description: 'Closed in requests: LipsyncModelKnown'
+  update:
+    $ref: '#/components/schemas/LipsyncModelKnown'
+- target: $.components.schemas.CreateProjectRequest.properties.dubbing_model
+  description: 'Closed in requests: DubbingModelKnown'
+  update:
+    $ref: '#/components/schemas/DubbingModelKnown'
+- target: $.components.schemas.CreateUploadRequest.properties.content_type
+  description: 'Closed in requests: UploadContentTypeKnown'
+  update:
+    $ref: '#/components/schemas/UploadContentTypeKnown'
+- target: $.components.schemas.CreateUploadRequest.properties.purpose
+  description: 'Closed in requests: MediaPurposeKnown'
+  update:
+    $ref: '#/components/schemas/MediaPurposeKnown'
+- target: $.components.schemas.EstimateDubRequest.properties.mode
+  description: 'Closed in requests: DubModeKnown'
+  update:
+    $ref: '#/components/schemas/DubModeKnown'
+- target: $.components.schemas.EstimateLipsyncRequest.properties.model
+  description: 'Closed in requests: LipsyncModelKnown'
+  update:
+    $ref: '#/components/schemas/LipsyncModelKnown'
+- target: $.components.schemas.EstimateProjectRequest.properties.dubbing_model
+  description: 'Closed in requests: DubbingModelKnown'
+  update:
+    $ref: '#/components/schemas/DubbingModelKnown'
+- target: $.components.schemas.ImportMediaRequest.properties.purpose
+  description: 'Closed in requests: MediaPurposeKnown'
+  update:
+    $ref: '#/components/schemas/MediaPurposeKnown'
+- target: $.components.schemas.LocalizationDubInput.properties.mode
+  description: 'Closed in requests: DubModeKnown'
+  update:
+    $ref: '#/components/schemas/DubModeKnown'
+- target: $.components.schemas.LocalizationLipsyncInput.properties.model
+  description: 'Closed in requests: LipsyncModelKnown'
+  update:
+    $ref: '#/components/schemas/LipsyncModelKnown'
+- target: $.paths['/jobs'].get.parameters[2].schema.items
+  description: 'Closed in requests: JobTypeKnown'
+  update:
+    $ref: '#/components/schemas/JobTypeKnown'
+- target: $.paths['/jobs'].get.parameters[3].schema.items
+  description: 'Closed in requests: JobStatusKnown'
+  update:
+    $ref: '#/components/schemas/JobStatusKnown'
+- target: $.paths['/jobs'].get.parameters[4].schema
+  description: 'Closed in requests: JobChannelKnown'
+  update:
+    $ref: '#/components/schemas/JobChannelKnown'
+- target: $.paths['/languages'].get.parameters[1].schema
+  description: 'Closed in requests: LanguageVariantKnown'
+  update:
+    $ref: '#/components/schemas/LanguageVariantKnown'
+- target: $.paths['/media'].get.parameters[0].schema
+  description: 'Closed in requests: MediaPurposeKnown'
+  update:
+    $ref: '#/components/schemas/MediaPurposeKnown'
+- target: $.paths['/projects/{project_id}/segments'].get.parameters[5].schema.items
+  description: 'Closed in requests: SegmentStatusKnown'
+  update:
+    $ref: '#/components/schemas/SegmentStatusKnown'
+- target: $.paths['/projects/{project_id}/segments'].get.parameters[6].schema.items
+  description: 'Closed in requests: DubStateKnown'
+  update:
+    $ref: '#/components/schemas/DubStateKnown'
+- target: $.paths['/projects/{project_id}/subtitles'].get.parameters[1].schema
+  description: 'Closed in requests: SubtitleLanguageRoleKnown'
+  update:
+    $ref: '#/components/schemas/SubtitleLanguageRoleKnown'
+- target: $.paths['/projects/{project_id}/subtitles'].get.parameters[2].schema
+  description: 'Closed in requests: SubtitleFormatKnown'
+  update:
+    $ref: '#/components/schemas/SubtitleFormatKnown'
+- target: $.paths['/projects/{project_id}/subtitles'].get.parameters[4].schema
+  description: 'Closed in requests: SubtitleCueKnown'
+  update:
+    $ref: '#/components/schemas/SubtitleCueKnown'
+- target: $.paths['/projects/{project_id}/transcript/versions'].get.parameters[3].schema.items
+  description: 'Closed in requests: VersionTriggerKnown'
+  update:
+    $ref: '#/components/schemas/VersionTriggerKnown'
+- target: $.paths['/projects/{project_id}/voices'].get.parameters[3].schema
+  description: 'Closed in requests: VoiceTypeKnown'
+  update:
+    $ref: '#/components/schemas/VoiceTypeKnown'
+- target: $.paths['/projects/{project_id}/voices'].get.parameters[4].schema
+  description: 'Closed in requests: VoiceGenderKnown'
+  update:
+    $ref: '#/components/schemas/VoiceGenderKnown'
+- target: $.paths['/usage'].get.parameters[4].schema
+  description: 'Closed in requests: CreditTypeKnown'
+  update:
+    $ref: '#/components/schemas/CreditTypeKnown'
+- target: $.paths['/usage'].get.parameters[5].schema
+  description: 'Closed in requests: UsageFeatureKnown'
+  update:
+    $ref: '#/components/schemas/UsageFeatureKnown'
+- target: $.paths['/usage/events'].get.parameters[3].schema
+  description: 'Closed in requests: CreditTypeKnown'
+  update:
+    $ref: '#/components/schemas/CreditTypeKnown'
+- target: $.paths['/usage/events'].get.parameters[4].schema
+  description: 'Closed in requests: UsageFeatureKnown'
+  update:
+    $ref: '#/components/schemas/UsageFeatureKnown'
+- target: $.paths['/voices'].get.parameters[1].schema
+  description: 'Closed in requests: DubbingModelKnown'
+  update:
+    $ref: '#/components/schemas/DubbingModelKnown'
+- target: $.paths['/voices'].get.parameters[4].schema
+  description: 'Closed in requests: VoiceTypeKnown'
+  update:
+    $ref: '#/components/schemas/VoiceTypeKnown'
+- target: $.paths['/voices'].get.parameters[5].schema
+  description: 'Closed in requests: VoiceGenderKnown'
+  update:
+    $ref: '#/components/schemas/VoiceGenderKnown'
+- target: $.components.parameters.IdempotencyKey
+  description: 'SDK-12: optional in SDK signatures; the SDK injects the key (S4). The base spec keeps it required.'
+  update:
+    required: false
+    description: 'A unique key per logical request (SDKs send a bare UUIDv4; an RFC 9651 quoted string is accepted and unquoted);
+      reuse it unchanged on retries. Kept 24 h per (workspace, acting user). Optional in SDKs: when omitted, the SDK generates
+      a UUIDv4 per call and reuses it across retries (S4).'

@@ -1,0 +1,77 @@
+{
+  "name": "@braskai/api",
+  "version": "3.0.0-alpha.1",
+  "description": "TypeScript SDK for the Rask AI API v3 (video and audio localization)",
+  "license": "MIT",
+  "author": "Brask AI",
+  "homepage": "https://github.com/braskai/rask-sdk-typescript#readme",
+  "bugs": {
+    "url": "https://github.com/braskai/rask-sdk-typescript/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/braskai/rask-sdk-typescript.git"
+  },
+  "keywords": [
+    "rask",
+    "rask-ai",
+    "dubbing",
+    "localization",
+    "translation",
+    "video",
+    "sdk",
+    "openapi"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check . && tsc -p tsconfig.json --noUnusedLocals --noUnusedParameters",
+    "test": "vitest run",
+    "test:acceptance": "vitest run test/acceptance.test.ts",
+    "acceptance:node": "node test/acceptance/cli.mjs",
+    "acceptance:bun": "bun test/acceptance/cli.mjs",
+    "acceptance:deno": "deno run -A test/acceptance/cli.mjs",
+    "runtime:node": "node test/runtime/check.mjs",
+    "runtime:bun": "bun test/runtime/check.mjs",
+    "runtime:deno": "deno run -A test/runtime/check.mjs",
+    "prepack": "npm run build",
+    "test:ci": "vitest run --exclude test/acceptance.test.ts --exclude test/operations.test.ts --exclude test/examples.test.ts --exclude test/uploads.test.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.5",
+    "@hey-api/openapi-ts": "0.99.0",
+    "@types/node": "22.20.5",
+    "tsdown": "0.23.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5",
+    "yaml": "2.8.1"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "contract": {
+    "description": "Copy of the committed API v3 contract, 82 GA operations.",
+    "repository": "localization_app",
+    "branch": "main",
+    "path": "localization/contracts/v3/spec/openapi.json",
+    "last_changed_in": "453e96cf",
+    "sha256": "2de520d050217963d252b0e11aa843131c4f576b0118c456c32184a7e31a460b"
+  },
+  "overlay": {
+    "description": "What this SDK changes in the contract before generating.",
+    "sha256": "344b70ab4a22b2cab0de42ba35c509d890b8321c60e5dee2c8d6683e61c13861"
+  }
+}

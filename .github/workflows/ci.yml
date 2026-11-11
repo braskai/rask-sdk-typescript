@@ -1,0 +1,88 @@
+name: CI
+
+# Builds, lints and tests. Nothing here publishes: release.yml calls this before it does.
+on:
+  push:
+    branches: [main, initial]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# The workflow's name is in the group: called by release.yml these checks run as `Release`, and a push to the same
+# branch must not cancel them.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The shared acceptance harness is its own repository.
+  ACCEPTANCE_REPOSITORY: braskai/rask-sdk-acceptance
+
+jobs:
+  build:
+    name: Build, lint, unit tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The dev toolchain needs Node 22.18 or newer, so this is 22 as setup-node resolves it today.
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Generated code matches the contract
+        run: |
+          npm run generate
+          git diff --exit-code -- src/generated
+      - run: npm run lint
+      - run: npm run build
+      - name: Unit tests without the harness
+        run: npm run test:ci
+      - name: Package contents
+        run: npm pack --dry-run
+
+  acceptance:
+    name: Acceptance (${{ matrix.runtime }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [node, bun, deno]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          repository: ${{ env.ACCEPTANCE_REPOSITORY }}
+          path: .acceptance
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+      - if: matrix.runtime == 'deno'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+      - run: npm run build
+      - run: npm run acceptance:${{ matrix.runtime }}
+        env:
+          RASK_SDK_ACCEPTANCE_DIR: .acceptance
+      - name: Timeout signals and certificates on this runtime
+        run: npm run runtime:${{ matrix.runtime }}
+      - if: matrix.runtime == 'node'
+        run: npm run test:acceptance
+        env:
+          RASK_SDK_ACCEPTANCE_DIR: .acceptance
