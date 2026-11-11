@@ -38,6 +38,9 @@ on their own. Use the id instead, as `rask.jobs.wait(job.id)` does.
 Upload a video, dub it, wait, download the result (`examples/quickstart.ts`):
 
 ```ts
+import { readFile, writeFile } from 'node:fs/promises';
+import { Rask } from '@braskai/api';
+
 export async function dub(rask: Rask, path: string, targetLanguage: string, outputPath: string) {
   // Progress is saved next to the video, so a run that stops can be started again without paying twice: the media, the
   // price you accepted, createProject's Idempotency-Key and the job it started. Delete the file to dub anew.
