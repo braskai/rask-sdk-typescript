@@ -16,7 +16,7 @@ The workflow refuses to run from any other branch, and refuses a version that is
 A pre-release version goes out as `latest` while no stable version exists, and as `next` once one does.
 A published version cannot be replaced: to fix one, release the next.
 If a run fails after npm took the version, make the release by hand:
-`gh release create v<version> --target <the commit> --generate-notes`.
+`gh release create v<version> --target <the commit> --generate-notes`, with `--prerelease` for a pre-release version.
 
 ## Set up once
 

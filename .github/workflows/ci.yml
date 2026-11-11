@@ -10,8 +10,10 @@ on:
 permissions:
   contents: read
 
+# The workflow's name is in the group: called by release.yml these checks run as `Release`, and a push to the same
+# branch must not cancel them.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
