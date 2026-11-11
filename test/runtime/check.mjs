@@ -220,7 +220,10 @@ try {
         const { value, error } = await outcome(client(issued, trust).rask.account.getMe(), 4000);
         assert.equal(value?.status, 200, String(error));
       });
-      await endsAtOnce('a certificate for another host name', await serve(certificates.elsewhere), trust);
+      // A client of its own. One that has spoken to 127.0.0.1 may resume that TLS session with the next server here,
+      // as Deno 2.9 does, and a resumed session shows no certificate to refuse.
+      const fresh = trusting(certificates.authority);
+      await endsAtOnce('a certificate for another host name', await serve(certificates.elsewhere), fresh);
     }
   }
 } finally {
