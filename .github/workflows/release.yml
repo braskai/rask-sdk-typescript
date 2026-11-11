@@ -1,0 +1,71 @@
+name: Release
+
+# Publishes @braskai/api to npm when a GitHub Release is published.
+# The release tag is "v" + the version in package.json, on a commit of the default branch.
+# npm trusts this workflow itself (trusted publishing, OIDC), so there is no npm token in this repository: on npmjs.com the
+# package names this repository, this file and the environment `npm` as its publisher. RELEASING.md has the steps.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish to npm
+    needs: checks
+    runs-on: ubuntu-latest
+    # The environment takes only `v*` tags.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # what npm exchanges for a publish right, and signs the provenance with
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - run: npm install -g npm@11
+      - name: The tag is this version, on the default branch
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::The release tag is $TAG and package.json says $version: the tag must be v$version."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"; then
+            echo "::error::$TAG is not on $DEFAULT_BRANCH: a release is cut from reviewed code only."
+            exit 1
+          fi
+      # A pre-release is `latest` while no stable version exists, so that `npm install @braskai/api` works during the
+      # alpha. Once there is a stable version, a pre-release goes out as `next`.
+      - name: Choose the dist-tag
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          latest=$(curl -fsS https://registry.npmjs.org/@braskai%2fapi | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8"))["dist-tags"].latest ?? ""')
+          case "$version" in
+            *-*) case "$latest" in *-*) tag=latest ;; *) tag=next ;; esac ;;
+            *) tag=latest ;;
+          esac
+          echo "Publishing $version as $tag (latest is $latest)."
+          echo "DIST_TAG=$tag" >> "$GITHUB_ENV"
+      - run: npm ci
+      # `prepack` builds dist.
+      - run: npm publish --access public --tag "$DIST_TAG"
