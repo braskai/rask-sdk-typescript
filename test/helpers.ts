@@ -21,7 +21,7 @@ export interface RecordedRequest {
   violations: unknown[];
   body_bytes: number;
   body_sha256: string;
-  response: { status: number; headers: Record<string, string> };
+  response: { status: number; headers: Record<string, string>; self_check: unknown[] };
 }
 
 /** One harness per test file. Reset it before each test that scripts it. */
