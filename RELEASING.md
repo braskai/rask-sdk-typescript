@@ -20,7 +20,8 @@ A published version cannot be replaced: to fix one, release the next.
 npm trusts the workflow itself (trusted publishing), so this repository holds no npm token.
 
 - On npmjs.com, a maintainer of `@braskai/api` names the publisher: GitHub Actions, repository
-  `braskai/rask-sdk-typescript`, workflow `release.yml`, environment `npm`. From a terminal that is:
+  `braskai/rask-sdk-typescript`, workflow `release.yml`, environment `npm`. From a terminal, with a current npm 11
+  (`npm install -g npm@11`; older ones have no `npm trust`), that is:
 
   ```sh
   npm trust github @braskai/api --repository braskai/rask-sdk-typescript --file release.yml --environment npm --allow-publish
